@@ -17,7 +17,7 @@ Ce backend est conçu pour être consommé par une application frontend (à veni
 
 ---
 
-## 🛠️ Technologies utilisées
+##  Technologies utilisées
 - Java 17
 - Spring Boot 3
 - Spring Security + JWT
@@ -57,7 +57,7 @@ L’authentification se fait avec **JWT**.
 
 ## 🚘 Fonctionnalités principales
 
-### 👤 Utilisateurs
+###  Utilisateurs
 - Inscription
 - Connexion
 - Rôles : `ROLE_USER`, `ROLE_ADMIN`
@@ -67,7 +67,7 @@ L’authentification se fait avec **JWT**.
 - Lister les véhicules
 - Disponibilité automatique
 
-### 👥 Clients
+###  Clients
 - Ajouter un client
 - Lister les clients
 
@@ -89,7 +89,7 @@ L’authentification se fait avec **JWT**.
 
 ---
 
-## 🗄 Base de données
+##  Base de données
 Configurer PostgreSQL dans `application.properties` :
 
 ```properties
