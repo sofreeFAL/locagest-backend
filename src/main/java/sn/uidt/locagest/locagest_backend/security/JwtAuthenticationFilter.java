@@ -36,28 +36,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String username;
 
-        // 1️ Pas de token → continuer la chaîne
+        //  Pas de header → continuer
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 2️ Extraire le token
-        jwt = authHeader.substring(7);
+        String jwt = authHeader.substring(7);
+        String username;
 
-        // 3️ Extraire le username depuis le token
-        username = jwtService.extractUsername(jwt);
+        //  EXTRACTION SÉCURISÉE DU USERNAME
+        try {
+            username = jwtService.extractUsername(jwt);
+        } catch (Exception e) {
+            //  Token invalide → IGNORER
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        // 4️ Vérifier si l'utilisateur n'est pas déjà authentifié
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        //  Authentifier si nécessaire
+        if (username != null &&
+                SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            // 5⃣ Charger l'utilisateur depuis la base
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            UserDetails userDetails =
+                    userDetailsService.loadUserByUsername(username);
 
-            // 6️ Valider le token (TOKEN + USER)
             if (jwtService.isTokenValid(jwt, userDetails)) {
 
                 UsernamePasswordAuthenticationToken authToken =
@@ -71,12 +75,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
 
-                // 7⃣ Injecter dans le contexte de sécurité
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
 
-        // 8️Continuer la chaîne
+        // Continuer la chaîne
         filterChain.doFilter(request, response);
     }
 }

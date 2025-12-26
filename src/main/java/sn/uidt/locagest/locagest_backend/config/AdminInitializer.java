@@ -14,10 +14,10 @@ public class AdminInitializer {
     CommandLineRunner createAdmin(UserRepository userRepository,
                                   PasswordEncoder passwordEncoder) {
         return args -> {
-            if (userRepository.findByEmail("admin@locagest.sn").isEmpty()) {
+            if (userRepository.findByEmail("admin@locagest.com").isEmpty()) {
                 User admin = new User();
-                admin.setEmail("admin@locagest.sn");
-                admin.setPassword(passwordEncoder.encode("admin123"));
+                admin.setEmail("admin@locagest.com");
+                admin.setPassword(passwordEncoder.encode("1234"));
                 admin.setRole("ADMIN");
                 userRepository.save(admin);
             }

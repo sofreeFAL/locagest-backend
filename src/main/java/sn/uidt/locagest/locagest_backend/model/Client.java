@@ -3,17 +3,33 @@ package sn.uidt.locagest.locagest_backend.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "clients")
+@Table(
+        name = "clients",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "email"),
+                @UniqueConstraint(columnNames = "numero_cni"),
+                @UniqueConstraint(columnNames = "telephone")
+        }
+)
 public class Client {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String nom;
+
+    @Column(nullable = false)
     private String prenom;
+
+    @Column(nullable = false)
     private String telephone;
+
+    @Column(nullable = false)
     private String email;
+
+    @Column(name = "numero_cni", nullable = false)
     private String numeroCni;
 
     // ===== GETTERS & SETTERS =====
@@ -22,7 +38,7 @@ public class Client {
         return id;
     }
 
-    public void setId(Long id) {   //  OBLIGATOIRE POUR DTO
+    public void setId(Long id) {   // requis pour DTO
         this.id = id;
     }
 

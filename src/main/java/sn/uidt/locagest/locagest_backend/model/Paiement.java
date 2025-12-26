@@ -4,26 +4,57 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "paiements")
+@Table(
+        name = "paiements",
+        uniqueConstraints = {
+                //  Une location ne peut être payée qu'une seule fois
+                @UniqueConstraint(columnNames = "location_id")
+        }
+)
 public class Paiement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // =========================
+    // MONTANT PAYÉ (FIGÉ)
+    // =========================
+    @Column(nullable = false)
     private Double montant;
 
-    private String mode; // WAVE, OM, CASH
+    // =========================
+    // MODE DE PAIEMENT
+    // =========================
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ModePaiement mode;
 
+    // =========================
+    // STATUT DU PAIEMENT
+    // =========================
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private StatutPaiement statut;
+
+    // =========================
+    // DATE DU PAIEMENT
+    // =========================
+    @Column(nullable = false)
     private LocalDateTime datePaiement;
 
+    // =========================
+    // RELATION AVEC LOCATION
+    // =========================
     @ManyToOne
     @JoinColumn(name = "location_id", nullable = false)
     private Location location;
 
     public Paiement() {}
 
-    // ===== GETTERS & SETTERS =====
+    // =========================
+    // GETTERS & SETTERS
+    // =========================
 
     public Long getId() {
         return id;
@@ -37,12 +68,20 @@ public class Paiement {
         this.montant = montant;
     }
 
-    public String getMode() {
+    public ModePaiement getMode() {
         return mode;
     }
 
-    public void setMode(String mode) {
+    public void setMode(ModePaiement mode) {
         this.mode = mode;
+    }
+
+    public StatutPaiement getStatut() {
+        return statut;
+    }
+
+    public void setStatut(StatutPaiement statut) {
+        this.statut = statut;
     }
 
     public LocalDateTime getDatePaiement() {

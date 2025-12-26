@@ -11,27 +11,48 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // =========================
+    // DATES
+    // =========================
+    @Column(name = "date_debut", nullable = false)
     private LocalDate dateDebut;
+
+    @Column(name = "date_fin", nullable = false)
     private LocalDate dateFin;
 
+    // =========================
+    // PRIX FIGÉ DE LA LOCATION
+    // =========================
+    @Column(name = "montant_total_location", nullable = false)
+    private Double montantTotalLocation;
+
+    // =========================
+    // STATUT
+    // =========================
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private StatutLocation statut;
 
+    // =========================
+    // RELATIONS
+    // =========================
     @ManyToOne
-    @JoinColumn(name = "client_id")
+    @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
     @ManyToOne
-    @JoinColumn(name = "vehicule_id")
+    @JoinColumn(name = "vehicule_id", nullable = false)
     private Vehicule vehicule;
 
-    // ===== GETTERS & SETTERS =====
+    // =========================
+    // GETTERS & SETTERS
+    // =========================
 
     public Long getId() {
         return id;
     }
 
-    public void setId(Long id) {   //  OBLIGATOIRE
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -49,6 +70,14 @@ public class Location {
 
     public void setDateFin(LocalDate dateFin) {
         this.dateFin = dateFin;
+    }
+
+    public Double getMontantTotalLocation() {
+        return montantTotalLocation;
+    }
+
+    public void setMontantTotalLocation(Double montantTotalLocation) {
+        this.montantTotalLocation = montantTotalLocation;
     }
 
     public StatutLocation getStatut() {

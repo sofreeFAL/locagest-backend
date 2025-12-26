@@ -3,17 +3,34 @@ package sn.uidt.locagest.locagest_backend.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "vehicules")
+@Table(
+        name = "vehicules",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "immatriculation")
+        }
+)
 public class Vehicule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String marque;
+
+    @Column(nullable = false)
+    private String modele;
+
+    @Column(nullable = false, unique = true)
     private String immatriculation;
+
+    // 💰 PRIX FIXÉ PAR L’ADMIN (OBLIGATOIRE)
+    @Column(name = "prix_par_jour", nullable = false)
+    private Double prixParJour;
+
+    // 🚗 DISPONIBILITÉ DU VÉHICULE
+    @Column(nullable = false)
     private boolean disponible = true;
-    private double prixParJour;
 
     // ===== GETTERS & SETTERS =====
 
@@ -21,7 +38,7 @@ public class Vehicule {
         return id;
     }
 
-    public void setId(Long id) {   //  OBLIGATOIRE POUR DTO
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -33,6 +50,14 @@ public class Vehicule {
         this.marque = marque;
     }
 
+    public String getModele() {
+        return modele;
+    }
+
+    public void setModele(String modele) {
+        this.modele = modele;
+    }
+
     public String getImmatriculation() {
         return immatriculation;
     }
@@ -41,19 +66,19 @@ public class Vehicule {
         this.immatriculation = immatriculation;
     }
 
+    public Double getPrixParJour() {
+        return prixParJour;
+    }
+
+    public void setPrixParJour(Double prixParJour) {
+        this.prixParJour = prixParJour;
+    }
+
     public boolean isDisponible() {
         return disponible;
     }
 
     public void setDisponible(boolean disponible) {
         this.disponible = disponible;
-    }
-
-    public double getPrixParJour() {
-        return prixParJour;
-    }
-
-    public void setPrixParJour(double prixParJour) {
-        this.prixParJour = prixParJour;
     }
 }
