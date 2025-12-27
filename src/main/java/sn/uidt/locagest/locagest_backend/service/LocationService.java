@@ -7,14 +7,12 @@ import sn.uidt.locagest.locagest_backend.dto.LocationDTO;
 import sn.uidt.locagest.locagest_backend.dto.LocationSearchDTO;
 import sn.uidt.locagest.locagest_backend.exception.BusinessException;
 import sn.uidt.locagest.locagest_backend.model.*;
-import sn.uidt.locagest.locagest_backend.repository.ClientRepository;
-import sn.uidt.locagest.locagest_backend.repository.LocationRepository;
-import sn.uidt.locagest.locagest_backend.repository.PaiementRepository;
-import sn.uidt.locagest.locagest_backend.repository.VehiculeRepository;
+import sn.uidt.locagest.locagest_backend.repository.*;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class LocationService {
@@ -23,21 +21,24 @@ public class LocationService {
     private final ClientRepository clientRepository;
     private final VehiculeRepository vehiculeRepository;
     private final PaiementRepository paiementRepository;
+    private final ContratLocationRepository contratRepository;
 
     public LocationService(
             LocationRepository locationRepository,
             ClientRepository clientRepository,
             VehiculeRepository vehiculeRepository,
-            PaiementRepository paiementRepository
+            PaiementRepository paiementRepository,
+            ContratLocationRepository contratRepository
     ) {
         this.locationRepository = locationRepository;
         this.clientRepository = clientRepository;
         this.vehiculeRepository = vehiculeRepository;
         this.paiementRepository = paiementRepository;
+        this.contratRepository = contratRepository;
     }
 
     // =====================================================
-    //  CRÉER UNE LOCATION
+    //  CRÉER UNE LOCATION + CONTRAT AUTO
     // =====================================================
     @Transactional
     public Location create(LocationDTO dto) {
@@ -68,13 +69,11 @@ public class LocationService {
                 dto.getDateDebut(),
                 dto.getDateFin()
         );
-
-        if (nbJours <= 0) {
-            nbJours = 1;
-        }
+        if (nbJours <= 0) nbJours = 1;
 
         double montantTotal = nbJours * vehicule.getPrixParJour();
 
+        // --- LOCATION ---
         Location location = new Location();
         location.setClient(client);
         location.setVehicule(vehicule);
@@ -84,19 +83,29 @@ public class LocationService {
         location.setStatut(StatutLocation.EN_COURS);
 
         vehicule.setDisponible(false);
+        Location savedLocation = locationRepository.save(location);
 
-        return locationRepository.save(location);
+        // --- CONTRAT AUTO ---
+        ContratLocation contrat = new ContratLocation();
+        contrat.setLocation(savedLocation);
+        contrat.setNumeroContrat("CTR-" + UUID.randomUUID());
+        contrat.setDateCreation(LocalDate.now());
+        contrat.setStatut(StatutContrat.ACTIF);
+
+        contratRepository.save(contrat);
+
+        return savedLocation;
     }
 
     // =====================================================
-    //  LISTER LES LOCATIONS
+    //  LISTER
     // =====================================================
     public List<Location> getAll() {
         return locationRepository.findAll();
     }
 
     // =====================================================
-    //  HISTORIQUE GLOBAL (TERMINÉES)
+    //  HISTORIQUE
     // =====================================================
     public List<Location> getHistorique() {
         return locationRepository.findByStatut(StatutLocation.TERMINEE);
@@ -128,7 +137,7 @@ public class LocationService {
     }
 
     // =====================================================
-    //  MODIFIER LE PRIX (ADMIN – AVANT DÉMARRAGE)
+    //  MODIFIER PRIX (ADMIN)
     // =====================================================
     @Transactional
     public Location modifierPrixLocation(Long id, Double nouveauMontant) {
@@ -137,9 +146,7 @@ public class LocationService {
                 .orElseThrow(() -> new BusinessException("Location introuvable"));
 
         if (!location.getDateDebut().isAfter(LocalDate.now())) {
-            throw new BusinessException(
-                    "Impossible de modifier le prix : la location a déjà commencé"
-            );
+            throw new BusinessException("Location déjà commencée");
         }
 
         if (nouveauMontant == null || nouveauMontant <= 0) {
@@ -151,7 +158,7 @@ public class LocationService {
     }
 
     // =====================================================
-    //  PROLONGER UNE LOCATION (ADMIN)
+    //  PROLONGER (ADMIN)
     // =====================================================
     @Transactional
     public Location prolongerLocation(Long id, LocalDate nouvelleDateFin) {
@@ -173,7 +180,7 @@ public class LocationService {
         );
 
         if (joursAjoutes <= 0) {
-            throw new BusinessException("Aucun jour supplémentaire");
+            throw new BusinessException("Aucun jour ajouté");
         }
 
         double supplement = joursAjoutes * location.getVehicule().getPrixParJour();
@@ -187,7 +194,7 @@ public class LocationService {
     }
 
     // =====================================================
-    // RETOUR DU VÉHICULE (PAIEMENT OBLIGATOIRE)
+    //  RETOUR VÉHICULE + FIN CONTRAT
     // =====================================================
     @Transactional
     public Location retourVehicule(Long id) {
@@ -199,20 +206,23 @@ public class LocationService {
             throw new BusinessException("Location déjà terminée");
         }
 
-        //  RÈGLE MÉTIER : PAIEMENT OBLIGATOIRE
-        boolean paiementEffectue = paiementRepository
-                .existsByLocationIdAndStatut(id, StatutPaiement.PAYE);
+        boolean paiementEffectue =
+                paiementRepository.existsByLocationIdAndStatut(id, StatutPaiement.PAYE);
 
         if (!paiementEffectue) {
-            throw new BusinessException(
-                    "Retour refusé : la location n’a pas encore été payée"
-            );
+            throw new BusinessException("Retour refusé : paiement non effectué");
         }
 
-        Vehicule vehicule = location.getVehicule();
-        vehicule.setDisponible(true);
-
+        location.getVehicule().setDisponible(true);
         location.setStatut(StatutLocation.TERMINEE);
+
+        // --- FIN CONTRAT ---
+        ContratLocation contrat = contratRepository
+                .findByLocationId(id)
+                .orElseThrow(() -> new BusinessException("Contrat introuvable"));
+
+        contrat.setStatut(StatutContrat.TERMINE);
+        contratRepository.save(contrat);
 
         return locationRepository.save(location);
     }
