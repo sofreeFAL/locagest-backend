@@ -5,7 +5,7 @@
 		"description": "Tests complets de l’API backend du projet LocaGest  \n(Auth, Véhicules, Clients, Locations, Paiements)\n\n**Toutes les requêtes utilisent :**\n\n[http://localhost:8080](http://localhost:8080)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "42265220",
-		"_collection_link": "https://locagest.postman.co/workspace/7373b88c-9659-43a3-8c0e-c8c2e2ca07c0/collection/42265220-2a1b62a1-3fc3-4b5e-a513-36a4de5bd415?action=share&source=collection_link&creator=42265220"
+		"_collection_link": "https://locagest.postman.co/workspace/locagest-Workspace~7373b88c-9659-43a3-8c0e-c8c2e2ca07c0/collection/42265220-2a1b62a1-3fc3-4b5e-a513-36a4de5bd415?action=share&source=collection_link&creator=42265220"
 	},
 	"item": [
 		{
@@ -354,9 +354,30 @@
 						"header": []
 					},
 					"response": []
+				}
+			]
+		},
+		{
+			"name": "contrats",
+			"item": [
+				{
+					"name": "consultation contrat par id",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
 				},
 				{
-					"name": "New Request",
+					"name": "telecharger contrat pdf",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "liste contrats",
 					"request": {
 						"method": "GET",
 						"header": []
@@ -399,22 +420,6 @@
 			"item": [
 				{
 					"name": "liste des véhicules sans token admin",
-					"request": {
-						"method": "GET",
-						"header": []
-					},
-					"response": []
-				},
-				{
-					"name": "utilisateur/route admin",
-					"request": {
-						"method": "GET",
-						"header": []
-					},
-					"response": []
-				},
-				{
-					"name": "utilisateur crée voiture",
 					"request": {
 						"method": "GET",
 						"header": []
