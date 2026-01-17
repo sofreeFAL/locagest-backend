@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocaGest - Tableau de bord</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
+<!-- Menu horizontal EN HAUT -->
+<header class="top-menu">
+    <div class="menu-container">
+        <!-- Logo voiture + LocalGest DANS LA MÊME LIGNE -->
+        <div class="logo-area">
+            <div class="car-icon">
+                <svg width="35" height="35" viewBox="0 0 40 40" fill="none">
+                    <rect x="8" y="20" width="24" height="10" rx="5" fill="#FF8C00"/>
+                    <rect x="15" y="12" width="10" height="6" rx="3" fill="#FFFFFF"/>
+                    <rect x="17" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <rect x="20" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <circle cx="12" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="28" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="12" cy="30" r="2" fill="#FF8C00"/>
+                    <circle cx="28" cy="30" r="2" fill="#FF8C00"/>
+                </svg>
+            </div>
+            <h1 class="app-title">LocaGest</h1>
+        </div>
+
+        <!-- Menu horizontal -->
+        <nav class="horizontal-menu">
+            <a href="dashboard.html" class="menu-item active">
+                <i class="fas fa-tachometer-alt"></i>
+                Tableau de bord
+            </a>
+            <a href="vehicles.html" class="menu-item">
+                <i class="fas fa-car"></i>
+                Véhicules
+            </a>
+            <a href="clients.html" class="menu-item">
+                <i class="fas fa-users"></i>
+                Clients
+            </a>
+            <a href="locations.html" class="menu-item">
+                <i class="fas fa-calendar-alt"></i>
+                Locations
+            </a>
+            <a href="contracts.html" class="menu-item">
+                <i class="fas fa-file-contract"></i>
+                Contrats
+            </a>
+            <a href="reports.html" class="menu-item">
+                <i class="fas fa-chart-bar"></i>
+                Rapports
+            </a>
+            <a href="#" class="menu-item logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Déconnexion
+            </a>
+        </nav>
+    </div>
+</header>
+
+<!-- Contenu principal SOUS le menu -->
+<main class="main-content">
+    <!-- Titre en blanc -->
+    <div class="page-title">
+        <h2 class="white-title">Tableau de bord - LocaGest</h2>
+    </div>
+
+    <!-- Cartes de statistiques PLUS COMPACTES -->
+    <div class="stats-container compact-cards">
+        <!-- Carte Véhicules -->
+        <div class="stat-card ultra-compact">
+            <div class="card-header">
+                <i class="fas fa-car"></i>
+                <h3 class="card-title-white">Véhicules</h3>
+            </div>
+            <div class="card-body-ultra-compact">
+                <div class="stat-row-ultra">
+                    <div class="stat-col">
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">Total</span>
+                            <span class="stat-value-ultra" id="totalVehicles">0</span>
+                        </div>
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">Disponibles</span>
+                            <span class="stat-value-ultra" id="availableVehicles">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-col">
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">Loués</span>
+                            <span class="stat-value-ultra" id="rentedVehicles">0</span>
+                        </div>
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">En maintenance</span>
+                            <span class="stat-value-ultra" id="maintenanceVehicles">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carte Clients -->
+        <div class="stat-card ultra-compact">
+            <div class="card-header">
+                <i class="fas fa-users"></i>
+                <h3 class="card-title-white">Clients</h3>
+            </div>
+            <div class="card-body-ultra-compact">
+                <div class="stat-row-ultra">
+                    <div class="stat-col">
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">Total</span>
+                            <span class="stat-value-ultra" id="totalClients">0</span>
+                        </div>
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">Actifs</span>
+                            <span class="stat-value-ultra" id="activeClients">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-col">
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">En attente</span>
+                            <span class="stat-value-ultra" id="pendingClients">0</span>
+                        </div>
+                        <div class="stat-item-empty"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carte Locations -->
+        <div class="stat-card ultra-compact">
+            <div class="card-header">
+                <i class="fas fa-calendar-alt"></i>
+                <h3 class="card-title-white">Locations</h3>
+            </div>
+            <div class="card-body-ultra-compact">
+                <div class="stat-row-ultra">
+                    <div class="stat-col">
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">En cours</span>
+                            <span class="stat-value-ultra" id="ongoingLocations">0</span>
+                        </div>
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">Terminées</span>
+                            <span class="stat-value-ultra" id="completedLocations">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-col">
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">À venir</span>
+                            <span class="stat-value-ultra" id="upcomingLocations">0</span>
+                        </div>
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">Total €</span>
+                            <span class="stat-value-ultra" id="totalLocationRevenue">0 €</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carte Contrats -->
+        <div class="stat-card ultra-compact">
+            <div class="card-header">
+                <i class="fas fa-file-contract"></i>
+                <h3 class="card-title-white">Contrats</h3>
+            </div>
+            <div class="card-body-ultra-compact">
+                <div class="stat-row-ultra">
+                    <div class="stat-col">
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">En cours</span>
+                            <span class="stat-value-ultra" id="ongoingContracts">0</span>
+                        </div>
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">Terminés</span>
+                            <span class="stat-value-ultra" id="completedContracts">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-col">
+                        <div class="stat-item-ultra">
+                            <span class="stat-label-ultra">À venir</span>
+                            <span class="stat-value-ultra" id="upcomingContracts">0</span>
+                        </div>
+                        <div class="stat-item-empty"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Contrats récents (maintenant plus visible) -->
+    <div class="contracts-section visible-section">
+        <div class="section-header">
+            <h3 class="white-title">CONTRATS RÉCENTS</h3>
+        </div>
+
+        <div class="table-container">
+            <table class="contracts-table dark-table">
+                <thead>
+                <tr>
+                    <th>N° Contrat</th>
+                    <th>Client</th>
+                    <th>Vehicule</th>
+                    <th>Date début</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="contractsTableBody">
+                <!-- Les données seront chargées ici -->
+                <tr>
+                    <td colspan="6" class="loading-cell">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement des contrats...
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

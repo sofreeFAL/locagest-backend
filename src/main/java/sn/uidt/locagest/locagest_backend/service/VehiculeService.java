@@ -20,7 +20,7 @@ public class VehiculeService {
     }
 
     // =========================
-    // CRÉER UN VÉHICULE (ADMIN)
+    // CRÉER UN VÉHICULE (ADMIN) - CORRIGÉ
     // =========================
     @Transactional
     public VehiculeDTO create(VehiculeDTO dto) {
@@ -53,7 +53,31 @@ public class VehiculeService {
         vehicule.setModele(dto.getModele());
         vehicule.setImmatriculation(dto.getImmatriculation());
         vehicule.setPrixParJour(dto.getPrixParJour());
-        vehicule.setDisponible(true);
+
+        // GÉRER LE STATUT - PARTIE AJOUTÉE
+        if (dto.getStatut() != null && !dto.getStatut().isBlank()) {
+            String statut = dto.getStatut().toUpperCase().trim();
+
+            // Valider les statuts autorisés
+            if (statut.equals("DISPONIBLE") || statut.equals("LOUE") || statut.equals("EN_MAINTENANCE")) {
+                vehicule.setStatut(statut);
+
+                // Mettre à jour disponible en fonction du statut
+                if (statut.equals("DISPONIBLE")) {
+                    vehicule.setDisponible(true);
+                } else {
+                    vehicule.setDisponible(false);
+                }
+            } else {
+                // Statut invalide, utiliser DISPONIBLE par défaut
+                vehicule.setStatut("DISPONIBLE");
+                vehicule.setDisponible(true);
+            }
+        } else {
+            // Pas de statut fourni, utiliser DISPONIBLE par défaut
+            vehicule.setStatut("DISPONIBLE");
+            vehicule.setDisponible(true);
+        }
 
         return toDTO(vehiculeRepository.save(vehicule));
     }
@@ -88,7 +112,7 @@ public class VehiculeService {
     }
 
     // =========================
-    //  MODIFIER (ADMIN)
+    //  MODIFIER (ADMIN) - CORRIGÉ
     // =========================
     @Transactional
     public VehiculeDTO update(Long id, VehiculeDTO dto) {
@@ -130,6 +154,15 @@ public class VehiculeService {
             vehicule.setImmatriculation(dto.getImmatriculation());
         }
 
+        // METTRE À JOUR LE STATUT SI FOURNI - PARTIE AJOUTÉE
+        if (dto.getStatut() != null && !dto.getStatut().isBlank()) {
+            String statut = dto.getStatut().toUpperCase().trim();
+            if (statut.equals("DISPONIBLE") || statut.equals("LOUE") || statut.equals("EN_MAINTENANCE")) {
+                vehicule.setStatut(statut);
+                vehicule.setDisponible(statut.equals("DISPONIBLE"));
+            }
+        }
+
         vehicule.setMarque(dto.getMarque());
         vehicule.setModele(dto.getModele());
         vehicule.setPrixParJour(dto.getPrixParJour());
@@ -138,7 +171,7 @@ public class VehiculeService {
     }
 
     // =========================
-    //  SUPPRIMER (ADMIN)
+    //  SUPPRIMER (ADMIN) - CORRIGÉ
     // =========================
     @Transactional
     public void delete(Long id) {
@@ -146,10 +179,10 @@ public class VehiculeService {
         Vehicule vehicule = vehiculeRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Véhicule introuvable"));
 
-        //  INTERDICTION DE SUPPRIMER UN VÉHICULE LOUÉ
+        //  INTERDICTION DE SUPPRIMER UN VÉHICULE LOUÉ OU EN MAINTENANCE
         if (!vehicule.isDisponible()) {
             throw new BusinessException(
-                    "Impossible de supprimer un véhicule déjà loué"
+                    "Impossible de supprimer un véhicule qui n'est pas disponible"
             );
         }
 
@@ -183,7 +216,7 @@ public class VehiculeService {
     }
 
     // =========================
-    // ENTITY → DTO
+    // ENTITY → DTO - CORRIGÉ
     // =========================
     private VehiculeDTO toDTO(Vehicule vehicule) {
         VehiculeDTO dto = new VehiculeDTO();
@@ -193,6 +226,7 @@ public class VehiculeService {
         dto.setImmatriculation(vehicule.getImmatriculation());
         dto.setPrixParJour(vehicule.getPrixParJour());
         dto.setDisponible(vehicule.isDisponible());
+        dto.setStatut(vehicule.getStatut()); // IMPORTANT: mapper le statut
         return dto;
     }
 }

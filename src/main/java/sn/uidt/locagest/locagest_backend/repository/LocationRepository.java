@@ -51,13 +51,10 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
             @Param("clientId") Long clientId,
             @Param("vehiculeId") Long vehiculeId,
             @Param("statut") StatutLocation statut,
-
             @Param("dateDebutMin") LocalDate dateDebutMin,
             @Param("dateDebutMax") LocalDate dateDebutMax,
-
             @Param("dateFinMin") LocalDate dateFinMin,
             @Param("dateFinMax") LocalDate dateFinMax,
-
             @Param("montantMin") Double montantMin,
             @Param("montantMax") Double montantMax
     );
@@ -88,4 +85,8 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
         ORDER BY l.dateFin DESC
     """)
     List<Location> findHistoriqueParVehicule(@Param("vehiculeId") Long vehiculeId);
+
+
+    @Query("SELECT l FROM Location l WHERE l.id NOT IN (SELECT c.location.id FROM ContratLocation c)")
+    List<Location> findLocationsSansContrat();
 }

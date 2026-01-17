@@ -24,13 +24,17 @@ public class Vehicule {
     @Column(nullable = false, unique = true)
     private String immatriculation;
 
-    // 💰 PRIX FIXÉ PAR L’ADMIN (OBLIGATOIRE)
     @Column(name = "prix_par_jour", nullable = false)
     private Double prixParJour;
 
-    // 🚗 DISPONIBILITÉ DU VÉHICULE
     @Column(nullable = false)
     private boolean disponible = true;
+
+    // AJOUTER CE CHAMP POUR LE STATUT
+    @Column(nullable = false, length = 20)
+    private String statut = "DISPONIBLE"; // Valeurs: DISPONIBLE, LOUE, EN_MAINTENANCE
+
+
 
     // ===== GETTERS & SETTERS =====
 
@@ -80,5 +84,14 @@ public class Vehicule {
 
     public void setDisponible(boolean disponible) {
         this.disponible = disponible;
+    }
+
+    // AJOUTER CES GETTERS/SETTERS
+    public String getStatut() {
+        return statut;
+    }
+
+    public void setStatut(String statut) {
+        this.statut = statut;
     }
 }

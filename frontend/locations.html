@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalGest - Gestion des locations</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
+<header class="top-menu">
+    <div class="menu-container">
+        <div class="logo-area">
+            <div class="car-icon">
+                <svg width="35" height="35" viewBox="0 0 40 40" fill="none">
+                    <rect x="8" y="20" width="24" height="10" rx="5" fill="#FF8C00"/>
+                    <rect x="15" y="12" width="10" height="6" rx="3" fill="#FFFFFF"/>
+                    <rect x="17" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <rect x="20" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <circle cx="12" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="28" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="12" cy="30" r="2" fill="#FF8C00"/>
+                    <circle cx="28" cy="30" r="2" fill="#FF8C00"/>
+                </svg>
+            </div>
+            <h1 class="app-title">LocalGest</h1>
+        </div>
+
+        <nav class="horizontal-menu">
+            <a href="dashboard.html" class="menu-item">
+                <i class="fas fa-tachometer-alt"></i>
+                Tableau de bord
+            </a>
+            <a href="vehicles.html" class="menu-item">
+                <i class="fas fa-car"></i>
+                Véhicules
+            </a>
+            <a href="clients.html" class="menu-item">
+                <i class="fas fa-users"></i>
+                Clients
+            </a>
+            <a href="locations.html" class="menu-item active">
+                <i class="fas fa-calendar-alt"></i>
+                Locations
+            </a>
+            <a href="contracts.html" class="menu-item">
+                <i class="fas fa-file-contract"></i>
+                Contrats
+            </a>
+            <a href="reports.html" class="menu-item">
+                <i class="fas fa-chart-bar"></i>
+                Rapports
+            </a>
+            <a href="#" class="menu-item logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Déconnexion
+            </a>
+        </nav>
+    </div>
+</header>
+
+<main class="main-content">
+    <div class="page-title with-button">
+        <div class="title-left">
+            <div class="title-icon" style="background-color: rgba(155, 89, 182, 0.2);">
+                <i class="fas fa-calendar-alt" style="color: #9b59b6; font-size: 1.8rem;"></i>
+            </div>
+            <h2 class="white-title">Gestion des locations</h2>
+        </div>
+        <button class="add-vehicle-btn" onclick="openAddLocationModal()">
+            <i class="fas fa-plus"></i> Nouvelle location
+        </button>
+    </div>
+
+    <!-- Section recherche -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-box" style="display: flex; gap: 10px;">
+                <div style="flex: 1; position: relative;">
+                    <i class="fas fa-search" style="color: #9b59b6;"></i>
+                    <input type="text"
+                           id="searchLocation"
+                           placeholder="Rechercher une location (client, véhicule...)"
+                           onkeyup="searchLocations()"
+                           style="padding-left: 45px;">
+                </div>
+                <button class="search-btn" onclick="searchLocations()" style="
+                    background-color: var(--orange);
+                    color: var(--blanc);
+                    border: none;
+                    padding: 0 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    white-space: nowrap;
+                    height: 44px;
+                ">
+                    Rechercher
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des locations -->
+    <div class="vehicles-section" style="border: 2px solid var(--orange);">
+        <div class="table-container">
+            <table class="vehicles-table dark-table">
+                <thead>
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Client</th>
+                    <th>Véhicule</th>
+                    <th style="width: 120px;">Date début</th>
+                    <th style="width: 120px;">Date fin</th>
+                    <th style="width: 100px;">Durée</th>
+                    <th style="width: 120px;">Montant</th>
+                    <th style="width: 120px;">Statut</th>
+                    <th style="width: 150px;">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="locationsTableBody">
+                <tr>
+                    <td colspan="9" class="loading-cell">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement des locations...
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Modal de création de location -->
+<div id="addLocationModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-calendar-plus"></i> Nouvelle location</h3>
+            <button class="close-btn" onclick="closeAddLocationModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="addLocationForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Client *</label>
+                        <select id="locationClient" required onchange="updateVehicleList()">
+                            <option value="">Sélectionner un client</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Véhicule disponible *</label>
+                        <select id="locationVehicle" required onchange="calculateAmount()">
+                            <option value="">Sélectionner un véhicule</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date de début *</label>
+                        <input type="date" id="locationStartDate" required onchange="calculateAmount()">
+                    </div>
+                    <div class="form-group">
+                        <label>Date de fin *</label>
+                        <input type="date" id="locationEndDate" required onchange="calculateAmount()">
+                    </div>
+                </div>
+
+                <!-- Section calcul montant -->
+                <div class="amount-section" style="
+                    background-color: #f8f9fa;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin: 15px 0;
+                    border-left: 4px solid #27ae60;
+                ">
+                    <h4 style="margin-top: 0; color: #2c3e50; margin-bottom: 10px;">
+                        <i class="fas fa-calculator"></i> Calcul du montant
+                    </h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <div style="margin-bottom: 8px;">
+                                <strong>Prix journalier:</strong>
+                                <span id="dailyPriceDisplay" style="color: #e67e22; font-weight: bold;">0 €</span>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <strong>Nombre de jours:</strong>
+                                <span id="daysCountDisplay" style="color: #3498db; font-weight: bold;">0</span>
+                            </div>
+                        </div>
+                        <div style="text-align: center; border-left: 1px solid #ddd; padding-left: 15px;">
+                            <div style="font-size: 0.9rem; color: #7f8c8d; margin-bottom: 5px;">Montant total</div>
+                            <div id="totalAmountDisplay" style="
+                                font-size: 1.8rem;
+                                font-weight: bold;
+                                color: #27ae60;
+                            ">
+                                0 €
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Notes (optionnel)</label>
+                    <textarea id="locationNotes" rows="3" placeholder="Informations complémentaires..."></textarea>
+                </div>
+
+                <input type="hidden" id="locationTotalAmount">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeAddLocationModal()">Annuler</button>
+            <button class="btn-save" onclick="saveLocation()">
+                <i class="fas fa-check"></i> Créer la location
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de détail de location -->
+<div id="viewLocationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-eye"></i> Détails de la location</h3>
+            <button class="close-btn" onclick="closeViewLocationModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="locationDetails">
+                <!-- Détails chargés dynamiquement -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeViewLocationModal()">Fermer</button>
+            <button class="btn-save" onclick="createContractFromLocation()">
+                <i class="fas fa-file-contract"></i> Créer contrat
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/locations.js"></script>
+</body>
+</html>

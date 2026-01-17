@@ -1,0 +1,240 @@
+/* ============================================
+   STYLES LOGIN - LOCALGEST
+   ============================================ */
+
+/* Page login spécifique */
+body.login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* CADRE PRINCIPAL - GRIS CLAIR AVEC BORDURES NOIRES */
+.main-frame {
+    background-color: var(--gris-clair);
+    border: 3px solid var(--noir);
+    border-radius: 15px;
+    width: 100%;
+    max-width: 400px;
+    padding: 40px 30px;
+    text-align: center;
+}
+
+/* Voiture */
+.car-icon {
+    margin-bottom: 25px;
+}
+
+.car-icon svg {
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.2));
+}
+
+/* Titre LocalGest en ORANGE */
+.app-title {
+    margin-bottom: 30px;
+}
+
+.app-title h1 {
+    color: var(--orange); /* ORANGE */
+    font-size: 2.8rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.app-subtitle {
+    color: #666;
+    font-size: 1rem;
+}
+
+/* Formulaire */
+.login-form {
+    margin-top: 10px;
+}
+
+.login-form .form-group {
+    margin-bottom: 20px;
+}
+
+/* Input avec icône */
+.input-with-icon {
+    position: relative;
+    width: 100%;
+}
+
+.input-with-icon .icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+}
+
+.input-with-icon input {
+    width: 100%;
+    padding: 14px 14px 14px 45px; /* Espace pour l'icône */
+    border: 2px solid #CCC;
+    border-radius: 6px;
+    font-size: 1rem;
+    background-color: var(--blanc);
+}
+
+.input-with-icon input:focus {
+    outline: none;
+    border-color: var(--orange);
+}
+
+/* Bouton Se connecter */
+.login-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--orange); /* Fond ORANGE */
+    color: var(--blanc); /* Texte BLANC */
+    border: none;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.login-btn .arrow {
+    width: 16px;
+    height: 16px;
+}
+
+.login-btn:hover {
+    background-color: var(--orange-hover);
+}
+
+/* Message d'erreur */
+.error-message {
+    background-color: #ffe6e6;
+    color: var(--rouge);
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 15px;
+    display: none;
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .main-frame {
+        padding: 30px 20px;
+    }
+
+    .app-title h1 {
+        font-size: 2.3rem;
+    }
+
+    .input-with-icon input {
+        padding: 12px 12px 12px 40px;
+    }
+}
+
+/* ============================================
+   ANIMATIONS ET EFFETS SPÉCIFIQUES LOGIN
+   ============================================ */
+
+/* Animation pour l'icône de voiture */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+    100% { transform: translateY(0px); }
+}
+
+.car-icon svg {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Effet d'ombre portée pour la voiture */
+.car-icon {
+    position: relative;
+}
+
+.car-icon::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 5px;
+    background: rgba(26, 35, 50, 0.1);
+    border-radius: 50%;
+    filter: blur(4px);
+}
+
+/* Style des labels */
+.form-group label {
+    letter-spacing: 0.5px;
+}
+
+/* Style des inputs au focus */
+.form-group input:focus {
+    background-color: #FFF8F0;
+}
+
+/* Style du bouton au chargement */
+.login-btn.loading {
+    position: relative;
+    color: transparent;
+}
+
+.login-btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin-top: -10px;
+    margin-left: -10px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Placeholder style */
+::-webkit-input-placeholder {
+    color: #999;
+    font-weight: 300;
+}
+
+::-moz-placeholder {
+    color: #999;
+    font-weight: 300;
+}
+
+:-ms-input-placeholder {
+    color: #999;
+    font-weight: 300;
+}
+
+/* Style pour les messages d'erreur */
+#errorMessage.show {
+    display: block;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -1,0 +1,261 @@
+/* ============================================
+   STYLES GÉNÉRAUX - LOCALGEST
+   ============================================ */
+
+/* Variables */
+:root {
+    --orange: #FF8C00;
+    --orange-hover: #E67E00;
+    --noir: #1A2332;
+    --noir-fonce: #0F1520;
+    --gris-clair: #F0F0F0;
+    --gris-fonce: #2A3446;
+    --blanc: #FFFFFF;
+    --rouge: #E74C3C;
+    --vert: #27AE60;
+    --bleu: #3498DB;
+    --jaune: #F1C40F;
+}
+
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+/* Style de base pour le body */
+body {
+    background-color: #FAFAFA;
+    min-height: 100vh;
+}
+/* NOTE: On ENLÈVE le style du body ici car il sera différent selon la page */
+/* body {
+    background-color: #FAFAFA;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+} */
+
+/* ============================================
+   UTILITAIRES COMMUNS
+   ============================================ */
+
+/* Utilitaires */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+
+.mt-20 { margin-top: 20px; }
+.mb-20 { margin-bottom: 20px; }
+.ml-20 { margin-left: 20px; }
+.mr-20 { margin-right: 20px; }
+
+.p-20 { padding: 20px; }
+
+.hidden { display: none; }
+
+/* Classes pour le thème noir */
+.dark-theme {
+    background-color: var(--noir);
+    color: var(--blanc);
+}
+
+.white-text {
+    color: var(--blanc) !important;
+}
+
+/* Styles pour les boutons d'action */
+.btn-action {
+    background: none;
+    border: none;
+    color: var(--orange);
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 4px;
+    transition: all 0.3s;
+    margin: 0 3px;
+}
+
+.btn-action:hover {
+    background-color: rgba(255, 140, 0, 0.1);
+}
+
+/* Styles pour les formulaires (si utilisés sur d'autres pages) */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--noir);
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--gris-fonce);
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
+}
+
+/* Alertes et messages */
+.alert {
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.alert-success {
+    background-color: rgba(39, 174, 96, 0.1);
+    color: var(--vert);
+    border: 1px solid var(--vert);
+}
+
+.alert-error {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: var(--rouge);
+    border: 1px solid var(--rouge);
+}
+
+.alert-info {
+    background-color: rgba(52, 152, 219, 0.1);
+    color: var(--bleu);
+    border: 1px solid var(--bleu);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gris-clair);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--orange);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--orange-hover);
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+    .hidden-mobile { display: none; }
+}
+
+@media (min-width: 769px) {
+    .hidden-desktop { display: none; }
+}
+
+
+/* Styles pour les contrats */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.badge-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.badge-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.btn-icon:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.btn-action {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-blue {
+    background-color: #3498DB;
+    color: white;
+}
+
+.btn-blue:hover {
+    background-color: #2980b9;
+}
+
+/* Détails du contrat */
+.contract-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #555;
+}
+
+.detail-value {
+    color: #333;
+}
+
+.status-en-cours {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.status-termine {
+    color: #3498db;
+    font-weight: 600;
+}

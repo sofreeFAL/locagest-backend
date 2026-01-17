@@ -1,5 +1,6 @@
 package sn.uidt.locagest.locagest_backend.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 @Entity
@@ -30,7 +31,13 @@ public class Client {
     private String email;
 
     @Column(name = "numero_cni", nullable = false)
+    @JsonProperty("numeroCni") // FORCE le nom dans le JSON
     private String numeroCni;
+
+    // AJOUTER CE CHAMP (non obligatoire) :
+    @Column
+    @JsonProperty("adresse")
+    private String adresse; // Peut être null
 
     // ===== GETTERS & SETTERS =====
 
@@ -38,7 +45,7 @@ public class Client {
         return id;
     }
 
-    public void setId(Long id) {   // requis pour DTO
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -80,5 +87,14 @@ public class Client {
 
     public void setNumeroCni(String numeroCni) {
         this.numeroCni = numeroCni;
+    }
+
+    // AJOUTER CES GETTERS/SETTERS :
+    public String getAdresse() {
+        return adresse;
+    }
+
+    public void setAdresse(String adresse) {
+        this.adresse = adresse;
     }
 }

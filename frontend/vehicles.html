@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocaGest - Gestion des véhicules</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
+<!-- Menu identique au dashboard) -->
+<header class="top-menu">
+    <div class="menu-container">
+        <!-- Logo voiture + LocalGest -->
+        <div class="logo-area">
+            <div class="car-icon">
+                <svg width="35" height="35" viewBox="0 0 40 40" fill="none">
+                    <rect x="8" y="20" width="24" height="10" rx="5" fill="#FF8C00"/>
+                    <rect x="15" y="12" width="10" height="6" rx="3" fill="#FFFFFF"/>
+                    <rect x="17" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <rect x="20" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <circle cx="12" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="28" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="12" cy="30" r="2" fill="#FF8C00"/>
+                    <circle cx="28" cy="30" r="2" fill="#FF8C00"/>
+                </svg>
+            </div>
+            <h1 class="app-title">LocaGest</h1>
+        </div>
+
+        <!-- Menu horizontal -->
+        <nav class="horizontal-menu">
+            <a href="dashboard.html" class="menu-item">
+                <i class="fas fa-tachometer-alt"></i>
+                Tableau de bord
+            </a>
+            <a href="vehicles.html" class="menu-item active">
+                <i class="fas fa-car"></i>
+                Véhicules
+            </a>
+            <a href="clients.html" class="menu-item">
+                <i class="fas fa-users"></i>
+                Clients
+            </a>
+            <a href="locations.html" class="menu-item">
+                <i class="fas fa-calendar-alt"></i>
+                Locations
+            </a>
+            <a href="contracts.html" class="menu-item">
+                <i class="fas fa-file-contract"></i>
+                Contrats
+            </a>
+            <a href="reports.html" class="menu-item">
+                <i class="fas fa-chart-bar"></i>
+                Rapports
+            </a>
+            <a href="#" class="menu-item logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Déconnexion
+            </a>
+        </nav>
+    </div>
+</header>
+
+<!-- Contenu principal -->
+<main class="main-content">
+    <!-- Titre avec icône voiture bleu clair -->
+    <div class="page-title with-button">
+        <div class="title-left">
+            <div class="title-icon">
+                <i class="fas fa-car" style="color: #3498DB;"></i>
+            </div>
+            <h2 class="white-title">Gestion des véhicules</h2>
+        </div>
+        <button class="add-vehicle-btn" onclick="openAddVehicleModal()">
+            <i class="fas fa-plus"></i> Ajouter un véhicule
+        </button>
+    </div>
+
+    <!-- Section recherche -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text"
+                       id="searchVehicle"
+                       placeholder="Rechercher un véhicule (marque, modèle, immatriculation...)"
+                       onkeyup="searchVehicles()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des véhicules -->
+    <div class="vehicles-section">
+        <div class="table-container">
+            <table class="vehicles-table dark-table">
+                <thead>
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Marque</th>
+                    <th>Modèle</th>
+                    <th>Immatriculation</th>
+                    <th>Statut</th>
+                    <th>Prix/jour</th>
+                    <th style="width: 100px;">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="vehiclesTableBody">
+                <!-- Les données seront chargées ici dynamiquement -->
+                <tr>
+                    <td colspan="7" class="loading-cell">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement des véhicules...
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Modal d'ajout de véhicule -->
+<div id="addVehicleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-car"></i> Ajouter un véhicule</h3>
+            <button class="close-btn" onclick="closeAddVehicleModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="addVehicleForm">
+                <div class="form-group">
+                    <label>Marque *</label>
+                    <input type="text" id="vehicleBrand" required>
+                </div>
+                <div class="form-group">
+                    <label>Modèle *</label>
+                    <input type="text" id="vehicleModel" required>
+                </div>
+                <div class="form-group">
+                    <label>Immatriculation *</label>
+                    <input type="text" id="vehiclePlate" required>
+                </div>
+                <div class="form-group">
+                    <label>Prix par jour (FCFA) *</label>
+                    <input type="number" id="vehiclePrice" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Statut</label>
+                    <select id="vehicleStatus">
+                        <option value="true">Disponible</option>
+                        <option value="false">Loué</option>
+                        <option value="MAINTENANCE">En maintenance</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeAddVehicleModal()">Annuler</button>
+            <button class="btn-save" onclick="saveVehicle()">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de modification -->
+<div id="editVehicleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Modifier véhicule</h3>
+            <button class="close-btn" onclick="closeEditModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editVehicleForm">
+                <div class="form-group">
+                    <label>Marque *</label>
+                    <input type="text" id="editBrand" required>
+                </div>
+                <div class="form-group">
+                    <label>Modèle *</label>
+                    <input type="text" id="editModel" required>
+                </div>
+                <div class="form-group">
+                    <label>Immatriculation *</label>
+                    <input type="text" id="editPlate" required>
+                </div>
+                <div class="form-group">
+                    <label>Prix par jour (FCFA) *</label>
+                    <input type="number" id="editPrice" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Statut</label>
+                    <select id="editStatus">
+                        <option value="DISPONIBLE">Disponible</option>
+                        <option value="LOUE">Loué</option>
+                        <option value="EN_MAINTENANCE">En maintenance</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeEditModal()">Annuler</button>
+            <button class="btn-save" onclick="updateVehicle()">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/vehicles.js"></script>
+</body>
+</html>

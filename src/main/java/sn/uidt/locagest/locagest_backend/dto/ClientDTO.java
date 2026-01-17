@@ -1,5 +1,7 @@
 package sn.uidt.locagest.locagest_backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ClientDTO {
 
     private Long id;
@@ -8,6 +10,10 @@ public class ClientDTO {
     private String telephone;
     private String email;
     private String numeroCni;
+
+    // AJOUTER CE CHAMP :
+    @JsonProperty("adresse")
+    private String adresse;
 
     public ClientDTO() {}
 
@@ -28,4 +34,13 @@ public class ClientDTO {
 
     public String getNumeroCni() { return numeroCni; }
     public void setNumeroCni(String numeroCni) { this.numeroCni = numeroCni; }
+
+    // AJOUTER CES GETTERS/SETTERS :
+    public String getAdresse() {
+        return adresse;
+    }
+
+    public void setAdresse(String adresse) {
+        this.adresse = adresse;
+    }
 }

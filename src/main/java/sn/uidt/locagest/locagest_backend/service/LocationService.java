@@ -1,5 +1,6 @@
 package sn.uidt.locagest.locagest_backend.service;
 
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -119,6 +120,7 @@ public class LocationService {
         return locationRepository.findHistoriqueParVehicule(vehiculeId);
     }
 
+
     // =====================================================
     //  RECHERCHE AVANCÉE
     // =====================================================
@@ -225,5 +227,19 @@ public class LocationService {
         contratRepository.save(contrat);
 
         return locationRepository.save(location);
+    }
+    @Scheduled(cron = "0 0 0 * * ?") // Exécuté tous les jours à minuit
+    @Transactional
+    public void updateExpiredLocations() {
+        List<Location> locations = locationRepository.findAll();
+        LocalDate today = LocalDate.now();
+
+        for (Location location : locations) {
+            if (location.getDateFin().isBefore(today) &&
+                    location.getStatut() == StatutLocation.EN_COURS) {
+                location.setStatut(StatutLocation.TERMINEE);
+                locationRepository.save(location);
+            }
+        }
     }
 }

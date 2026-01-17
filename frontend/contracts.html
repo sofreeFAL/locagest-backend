@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalGest - Gestion des contrats</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
+<!-- Menu identique -->
+<header class="top-menu">
+    <div class="menu-container">
+        <!-- Logo voiture + LocalGest -->
+        <div class="logo-area">
+            <div class="car-icon">
+                <svg width="35" height="35" viewBox="0 0 40 40" fill="none">
+                    <rect x="8" y="20" width="24" height="10" rx="5" fill="#FF8C00"/>
+                    <rect x="15" y="12" width="10" height="6" rx="3" fill="#FFFFFF"/>
+                    <rect x="17" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <rect x="20" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <circle cx="12" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="28" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="12" cy="30" r="2" fill="#FF8C00"/>
+                    <circle cx="28" cy="30" r="2" fill="#FF8C00"/>
+                </svg>
+            </div>
+            <h1 class="app-title">LocalGest</h1>
+        </div>
+
+        <!-- Menu horizontal -->
+        <nav class="horizontal-menu">
+            <a href="dashboard.html" class="menu-item">
+                <i class="fas fa-tachometer-alt"></i>
+                Tableau de bord
+            </a>
+            <a href="vehicles.html" class="menu-item">
+                <i class="fas fa-car"></i>
+                Véhicules
+            </a>
+            <a href="clients.html" class="menu-item">
+                <i class="fas fa-users"></i>
+                Clients
+            </a>
+            <a href="locations.html" class="menu-item">
+                <i class="fas fa-calendar-alt"></i>
+                Locations
+            </a>
+            <a href="contracts.html" class="menu-item active">
+                <i class="fas fa-file-contract"></i>
+                Contrats
+            </a>
+            <a href="reports.html" class="menu-item">
+                <i class="fas fa-chart-bar"></i>
+                Rapports
+            </a>
+            <a href="#" class="menu-item logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Déconnexion
+            </a>
+        </nav>
+    </div>
+</header>
+
+<!-- Contenu principal -->
+<main class="main-content">
+    <!-- Titre avec icône document bleue -->
+    <div class="page-title with-button">
+        <div class="title-left">
+            <div class="title-icon" style="background-color: rgba(52, 152, 219, 0.2);">
+                <i class="fas fa-file-contract" style="color: #3498DB; font-size: 1.8rem;"></i>
+            </div>
+            <h2 class="white-title">Gestion des contrats</h2>
+        </div>
+        <button class="add-vehicle-btn" onclick="openAddContractModal()">
+            <i class="fas fa-plus"></i> Nouveau contrat
+        </button>
+    </div>
+
+    <!-- Section recherche -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-box" style="display: flex; gap: 10px;">
+                <div style="flex: 1; position: relative;">
+                    <i class="fas fa-search" style="color: #3498DB;"></i>
+                    <input type="text"
+                           id="searchContract"
+                           placeholder="Rechercher un contrat (client, véhicule, numéro...)"
+                           onkeyup="searchContracts()"
+                           style="padding-left: 45px;">
+                </div>
+                <button class="search-btn" onclick="searchContracts()" style="
+                    background-color: var(--orange);
+                    color: var(--blanc);
+                    border: none;
+                    padding: 0 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    white-space: nowrap;
+                    height: 44px;
+                ">
+                    Rechercher
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des contrats -->
+    <div class="vehicles-section" style="border: 2px solid var(--orange);">
+        <div class="table-container">
+            <table class="vehicles-table dark-table">
+                <thead>
+                <tr>
+                    <th style="width: 100px;">N° Contrat</th>
+                    <th>Client</th>
+                    <th>Véhicule</th>
+                    <th style="width: 120px;">Date début</th>
+                    <th style="width: 120px;">Date fin</th>
+                    <th style="width: 100px;">Durée</th>
+                    <th style="width: 120px;">Montant</th>
+                    <th style="width: 120px;">Statut</th>
+                    <th style="width: 150px;">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="contractsTableBody">
+                <!-- Les données seront chargées ici dynamiquement -->
+                <tr>
+                    <td colspan="9" class="loading-cell">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement des contrats...
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Modal d'ajout de contrat -->
+<div id="addContractModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-file-contract"></i> Nouveau contrat</h3>
+            <button class="close-btn" onclick="closeAddContractModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="addContractForm">
+                <div class="form-group">
+                    <label>Location *</label>
+                    <select id="contractLocation" required onchange="updateLocationDetails()">
+                        <option value="">Sélectionner une location sans contrat</option>
+                        <!-- Les locations seront chargées dynamiquement -->
+                    </select>
+                </div>
+
+                <!-- Détails de la location sélectionnée -->
+                <div id="locationDetails" style="
+                    background-color: #f8f9fa;
+                    border-radius: 5px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    border-left: 4px solid #3498db;
+                    display: none;
+                ">
+                    <h4 style="margin-top: 0; color: #2c3e50;">
+                        <i class="fas fa-info-circle"></i> Détails de la location
+                    </h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <strong>Client:</strong> <span id="detailClient">-</span>
+                        </div>
+                        <div>
+                            <strong>Véhicule:</strong> <span id="detailVehicle">-</span>
+                        </div>
+                        <div>
+                            <strong>Date début:</strong> <span id="detailDateDebut">-</span>
+                        </div>
+                        <div>
+                            <strong>Date fin:</strong> <span id="detailDateFin">-</span>
+                        </div>
+                        <div>
+                            <strong>Durée:</strong> <span id="detailDuree">-</span>
+                        </div>
+                        <div>
+                            <strong>Montant:</strong> <span id="detailMontant">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Numéro de contrat</label>
+                        <input type="text" id="contractNumber" readonly
+                               value="Auto-généré"
+                               style="background-color: #f5f5f5;">
+                    </div>
+                    <div class="form-group">
+                        <label>Statut *</label>
+                        <select id="contractStatus" required>
+                            <option value="ACTIF">Actif</option>
+                            <option value="TERMINE">Terminé</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Date de création *</label>
+                    <input type="date" id="contractCreationDate" required value="">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeAddContractModal()">Annuler</button>
+            <button class="btn-save" onclick="saveContract()">Créer contrat</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de détail du contrat -->
+<div id="viewContractModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-eye"></i> Détails du contrat</h3>
+            <button class="close-btn" onclick="closeViewContractModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="contractDetails">
+                <!-- Les détails seront chargés ici dynamiquement -->
+                <div class="loading-cell">
+                    <i class="fas fa-spinner fa-spin"></i> Chargement des détails...
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeViewContractModal()">Fermer</button>
+            <button class="btn-save" onclick="printContract()" id="printBtn">
+                <i class="fas fa-print"></i> Imprimer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'édition de contrat -->
+<div id="editContractModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Modifier le contrat</h3>
+            <button class="close-btn" onclick="closeEditContractModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editContractForm">
+                <div class="form-group">
+                    <label>Numéro de contrat *</label>
+                    <input type="text" id="editContractNumber" required>
+                </div>
+                <div class="form-group">
+                    <label>Statut *</label>
+                    <select id="editContractStatus" required>
+                        <option value="ACTIF">Actif</option>
+                        <option value="TERMINE">Terminé</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date de création *</label>
+                    <input type="date" id="editContractCreationDate" required>
+                </div>
+                <input type="hidden" id="editContractId">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeEditContractModal()">Annuler</button>
+            <button class="btn-save" onclick="updateContract()">Mettre à jour</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/contracts.js"></script>
+<script>
+    // Fonction pour pré-remplir la date d'aujourd'hui
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('contractCreationDate').value = today;
+    });
+
+    function printContract() {
+        window.print();
+    }
+
+    function closeEditContractModal() {
+        document.getElementById('editContractModal').style.display = 'none';
+    }
+</script>
+</body>
+</html>

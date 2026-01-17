@@ -44,6 +44,12 @@ public class ClientService {
             throw new BusinessException("Numéro de CNI obligatoire");
         }
 
+        // ADRESSE : optionnelle - pas de validation nécessaire
+        // Si adresse est vide, on la met à null pour la base de données
+        if (client.getAdresse() != null && client.getAdresse().isBlank()) {
+            client.setAdresse(null);
+        }
+
         if (clientRepository.existsByEmail(client.getEmail())) {
             throw new BusinessException("Email déjà utilisé");
         }
@@ -95,6 +101,11 @@ public class ClientService {
             throw new BusinessException("Numéro de CNI obligatoire");
         }
 
+        // Gérer l'adresse - optionnelle
+        if (data.getAdresse() != null && data.getAdresse().isBlank()) {
+            data.setAdresse(null);
+        }
+
         if (!client.getEmail().equals(data.getEmail())
                 && clientRepository.existsByEmail(data.getEmail())) {
             throw new BusinessException("Email déjà utilisé");
@@ -110,11 +121,13 @@ public class ClientService {
             throw new BusinessException("Numéro de CNI déjà utilisé");
         }
 
+        // Mettre à jour tous les champs
         client.setNom(data.getNom());
         client.setPrenom(data.getPrenom());
         client.setTelephone(data.getTelephone());
         client.setEmail(data.getEmail());
         client.setNumeroCni(data.getNumeroCni());
+        client.setAdresse(data.getAdresse()); // ← CORRECTION IMPORTANTE ICI
 
         return clientRepository.save(client);
     }

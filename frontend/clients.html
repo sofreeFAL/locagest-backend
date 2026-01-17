@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalGest - Gestion des clients</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
+<!-- Menu identique -->
+<header class="top-menu">
+    <div class="menu-container">
+        <!-- Logo voiture + LocalGest -->
+        <div class="logo-area">
+            <div class="car-icon">
+                <svg width="35" height="35" viewBox="0 0 40 40" fill="none">
+                    <rect x="8" y="20" width="24" height="10" rx="5" fill="#FF8C00"/>
+                    <rect x="15" y="12" width="10" height="6" rx="3" fill="#FFFFFF"/>
+                    <rect x="17" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <rect x="20" y="14" width="3" height="3" rx="1" fill="#E0E0E0"/>
+                    <circle cx="12" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="28" cy="30" r="4" fill="#FFFFFF"/>
+                    <circle cx="12" cy="30" r="2" fill="#FF8C00"/>
+                    <circle cx="28" cy="30" r="2" fill="#FF8C00"/>
+                </svg>
+            </div>
+            <h1 class="app-title">LocalGest</h1>
+        </div>
+
+        <!-- Menu horizontal -->
+        <nav class="horizontal-menu">
+            <a href="dashboard.html" class="menu-item">
+                <i class="fas fa-tachometer-alt"></i>
+                Tableau de bord
+            </a>
+            <a href="vehicles.html" class="menu-item">
+                <i class="fas fa-car"></i>
+                Véhicules
+            </a>
+            <a href="clients.html" class="menu-item active">
+                <i class="fas fa-users"></i>
+                Clients
+            </a>
+            <a href="locations.html" class="menu-item">
+                <i class="fas fa-calendar-alt"></i>
+                Locations
+            </a>
+            <a href="contracts.html" class="menu-item">
+                <i class="fas fa-file-contract"></i>
+                Contrats
+            </a>
+            <a href="reports.html" class="menu-item">
+                <i class="fas fa-chart-bar"></i>
+                Rapports
+            </a>
+            <a href="#" class="menu-item logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Déconnexion
+            </a>
+        </nav>
+    </div>
+</header>
+
+<!-- Contenu principal -->
+<main class="main-content">
+    <!-- Titre avec icône groupe de personnes bleue -->
+    <div class="page-title with-button">
+        <div class="title-left">
+            <div class="title-icon" style="background-color: rgba(52, 152, 219, 0.2);">
+                <i class="fas fa-users" style="color: #3498DB; font-size: 1.8rem;"></i>
+            </div>
+            <h2 class="white-title">Gestion des clients</h2>
+        </div>
+        <button class="add-vehicle-btn" onclick="openAddClientModal()">
+            <i class="fas fa-plus"></i> Ajouter un client
+        </button>
+    </div>
+
+    <!-- Section recherche -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-box" style="display: flex; gap: 10px;">
+                <div style="flex: 1; position: relative;">
+                    <i class="fas fa-search" style="color: #3498DB;"></i>
+                    <input type="text"
+                           id="searchClient"
+                           placeholder="Rechercher un client (nom, téléphone, email...)"
+                           onkeyup="searchClients()"
+                           style="padding-left: 45px;">
+                </div>
+                <button class="search-btn" onclick="searchClients()" style="
+                    background-color: var(--orange);
+                    color: var(--blanc);
+                    border: none;
+                    padding: 0 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    white-space: nowrap;
+                    height: 44px;
+                ">
+                    Rechercher
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des clients -->
+    <div class="vehicles-section" style="border: 2px solid var(--orange);">
+        <div class="table-container">
+            <table class="vehicles-table dark-table">
+                <thead>
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Nom complet</th>
+                    <th>Téléphone</th>
+                    <th>Email</th>
+                    <th>CNI</th>
+                    <th>Adresse</th>
+                    <th>Historique</th>
+                    <th style="width: 100px;">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="clientsTableBody">
+                <!-- Les données seront chargées ici dynamiquement -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Modal d'ajout de client -->
+<div id="addClientModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-plus"></i> Ajouter un client</h3>
+            <button class="close-btn" onclick="closeAddClientModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="addClientForm">
+                <div class="form-group">
+                    <label>Nom *</label>
+                    <input type="text" id="clientLastName" required>
+                </div>
+                <div class="form-group">
+                    <label>Prénom *</label>
+                    <input type="text" id="clientFirstName" required>
+                </div>
+                <div class="form-group">
+                    <label>Téléphone *</label>
+                    <input type="tel" id="clientPhone" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="clientEmail">
+                </div>
+                <div class="form-group">
+                    <label>Numéro CNI</label>
+                    <input type="text" id="clientCni" required>
+                </div>
+                <div class="form-group">
+                    <label>Adresse</label>
+                    <input type="text" id="clientAddress">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeAddClientModal()">Annuler</button>
+            <button class="btn-save" onclick="saveClient()">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de modification client -->
+<div id="editClientModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-edit"></i> Modifier client</h3>
+            <button class="close-btn" onclick="closeEditClientModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editClientForm">
+                <div class="form-group">
+                    <label>Nom *</label>
+                    <input type="text" id="editClientLastName" required>
+                </div>
+                <div class="form-group">
+                    <label>Prénom *</label>
+                    <input type="text" id="editClientFirstName" required>
+                </div>
+                <div class="form-group">
+                    <label>Téléphone *</label>
+                    <input type="tel" id="editClientPhone" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="editClientEmail">
+                </div>
+                <div class="form-group">
+                    <label>Numéro CNI *</label>
+                    <input type="text" id="editClientCni" required>
+                </div>
+                <div class="form-group">
+                    <label>Adresse</label>
+                    <input type="text" id="editClientAddress">
+                </div>
+                <input type="hidden" id="editClientId">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeEditClientModal()">Annuler</button>
+            <button class="btn-save" onclick="updateClient()">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/clients.js"></script>
+</body>
+</html>

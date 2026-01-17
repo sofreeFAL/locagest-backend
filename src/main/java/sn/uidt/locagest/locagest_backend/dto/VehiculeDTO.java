@@ -1,18 +1,18 @@
 package sn.uidt.locagest.locagest_backend.dto;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class VehiculeDTO {
 
     private Long id;
-
     private String marque;
     private String modele;
     private String immatriculation;
-
-    //  PRIX FIXÉ PAR L’ADMIN À LA CRÉATION
     private Double prixParJour;
-
-    //  DISPONIBILITÉ (LECTURE SEULE POUR USER)
     private Boolean disponible;
+
+    // AJOUTER CE CHAMP POUR LE STATUT
+    @JsonProperty("statut")
+    private String statut; // "DISPONIBLE", "LOUE", "EN_MAINTENANCE"
 
     public VehiculeDTO() {}
 
@@ -64,5 +64,14 @@ public class VehiculeDTO {
 
     public void setDisponible(Boolean disponible) {
         this.disponible = disponible;
+    }
+
+    // AJOUTER CES GETTERS/SETTERS
+    public String getStatut() {
+        return statut;
+    }
+
+    public void setStatut(String statut) {
+        this.statut = statut;
     }
 }
