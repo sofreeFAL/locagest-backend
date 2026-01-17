@@ -52,39 +52,107 @@ async function fetchClients() {
     }
 }
 
-function displayClients(clients) {
+async function displayClients(clients) {
     const tbody = document.getElementById('clientsTableBody');
-    tbody.innerHTML = ''; // Vider le tableau
+    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell"><i class="fas fa-spinner fa-spin"></i> Chargement des clients...</td></tr>';
 
-    tbody.innerHTML = clients.map(client => `
+    console.log('Nombre total de clients:', clients.length); // Debug
+
+    // Charger les historiques un par un pour debug
+    const clientsWithHistory = [];
+
+    for (const client of clients) {
+        try {
+            console.log(`Chargement historique pour client ${client.id} (${client.prenom} ${client.nom})`); // Debug
+
+            // ESSAYER LES DEUX ENDPOINTS POSSIBLES
+            let locationCount = 0;
+
+            // Méthode 1: Essayer d'abord l'endpoint historique
+            try {
+                const token = localStorage.getItem('locagest_token');
+                const response = await fetch(`http://localhost:8080/locations/historique/client/${client.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const locations = await response.json();
+                    locationCount = locations.length || 0;
+                    console.log(`  Méthode 1 (historique): ${locationCount} locations`);
+                }
+            } catch (error1) {
+                console.log(`  Méthode 1 échouée: ${error1.message}`);
+            }
+
+            // Si méthode 1 donne 0, essayer méthode 2
+            if (locationCount === 0) {
+                try {
+                    const token = localStorage.getItem('locagest_token');
+                    const response = await fetch(`http://localhost:8080/locations/client/${client.id}/all`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const locations = await response.json();
+                        locationCount = locations.length || 0;
+                        console.log(`  Méthode 2 (/all): ${locationCount} locations`);
+                    }
+                } catch (error2) {
+                    console.log(`  Méthode 2 échouée: ${error2.message}`);
+                }
+            }
+
+            clientsWithHistory.push({
+                ...client,
+                locationCount
+            });
+
+        } catch (error) {
+            console.error(`Erreur pour client ${client.id}:`, error);
+            clientsWithHistory.push({ ...client, locationCount: 0 });
+        }
+    }
+
+    console.log('Résultats finaux:', clientsWithHistory); // Debug
+
+    // Afficher les clients
+    if (clientsWithHistory.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="loading-cell">
+                    <i class="fas fa-info-circle"></i> Aucun client trouvé
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = clientsWithHistory.map(client => {
+        const historyClass = client.locationCount > 0 ? 'has-history' : 'no-history';
+        const historyText = client.locationCount === 0 ?
+            'Aucune location' :
+            `${client.locationCount} location${client.locationCount !== 1 ? 's' : ''}`;
+
+        return `
         <tr>
-            <!-- COLONNE 1: ID -->
             <td><strong>C${client.id}</strong></td>
-            
-            <!-- COLONNE 2: NOM COMPLET (Prénom + Nom) -->
             <td>${client.prenom} ${client.nom}</td>
-            
-            <!-- COLONNE 3: TÉLÉPHONE -->
             <td>${client.telephone}</td>
-            
-            <!-- COLONNE 4: EMAIL -->
             <td>${client.email}</td>
-            
-            <!-- COLONNE 5: CNI (numéroCni) -->
-            <td>${client.numeroCni}</td>
-            
-            <!-- COLONNE 6: ADRESSE -->
+            <td>${client.numeroCni || client.numero_cni || ''}</td>
             <td>${client.adresse || 'N/A'}</td>
-            
-            <!-- COLONNE 7: HISTORIQUE -->
             <td>
-                <span class="history-badge">
+                <span class="history-badge ${historyClass}">
                     <i class="fas fa-history" style="margin-right: 5px;"></i>
-                    ${getLocationCount(client)} location${getLocationCount(client) !== 1 ? 's' : ''}
+                    ${historyText}
                 </span>
             </td>
-            
-            <!-- COLONNE 8: ACTIONS -->
             <td>
                 <div class="action-buttons">
                     <button class="btn-edit" onclick="editClient(${client.id})" title="Modifier">
@@ -93,16 +161,90 @@ function displayClients(clients) {
                     <button class="btn-delete" onclick="deleteClient(${client.id})" title="Supprimer">
                         <i class="fas fa-trash"></i>
                     </button>
+                    
                 </div>
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
-function getLocationCount(client) {
-    return 0; // Temporaire - à adapter plus tard
+// =====================================================
+//  COMPTER TOUTES LES LOCATIONS D'UN CLIENT (TOUS STATUTS) - CORRIGÉ
+// =====================================================
+async function getLocationCount(clientId) {
+    try {
+        const token = localStorage.getItem('locagest_token');
+        const response = await fetch(`http://localhost:8080/locations/historique/client/${clientId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const locations = await response.json();
+            console.log(`Client ${clientId} a ${locations.length} locations:`, locations); // Debug
+            return locations.length || 0;
+        }
+
+        console.warn(`Erreur pour client ${clientId}: ${response.status}`);
+        return 0;
+
+    } catch (error) {
+        console.error(`Erreur chargement locations pour client ${clientId}:`, error);
+        return 0;
+    }
 }
 
+// =====================================================
+//  COMPTER LES LOCATIONS ACTIVES (EN_COURS + A_VENIR)
+// =====================================================
+async function getActiveLocationCount(clientId) {
+    try {
+        const token = localStorage.getItem('locagest_token');
+        const response = await fetch(`http://localhost:8080/locations/client/${clientId}/all`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const locations = await response.json();
+            // Compter seulement les locations actives
+            return locations.filter(location => {
+                const statut = (location.statut || '').toUpperCase();
+                return statut === 'EN_COURS' || statut === 'A_VENIR';
+            }).length || 0;
+        }
+        return 0;
+    } catch (error) {
+        console.error(`Erreur chargement locations actives pour client ${clientId}:`, error);
+        return 0;
+    }
+}
+// Fonctions utilitaires pour les statuts (à ajouter)
+function getLocationStatusClass(location) {
+    if (!location.statut) return 'status-pending';
+    const statut = location.statut.toUpperCase();
+    if (statut === 'EN_COURS') return 'status-active';
+    if (statut === 'TERMINEE') return 'status-completed';
+    if (statut === 'A_VENIR') return 'status-upcoming';
+    if (statut === 'ANNULEE') return 'status-cancelled';
+    return 'status-pending';
+}
+
+function getLocationStatusText(status) {
+    if (!status) return 'Inconnu';
+    switch(status.toUpperCase()) {
+        case 'EN_COURS': return 'EN COURS';
+        case 'TERMINEE': return 'TERMINÉE';
+        case 'A_VENIR': return 'À VENIR';
+        case 'ANNULEE': return 'ANNULÉE';
+        default: return status;
+    }
+}
 async function editClient(clientId) {
     currentEditClientId = clientId;
     try {
@@ -226,7 +368,101 @@ async function saveClient() {
         showNotification('Erreur lors de l\'ajout du client', 'error');
     }
 }
+// =====================================================
+//  VOIR L'HISTORIQUE D'UN CLIENT
+// =====================================================
+async function viewClientHistory(clientId) {
+    try {
+        const token = localStorage.getItem('locagest_token');
+        const response = await fetch(`http://localhost:8080/locations/historique/client/${clientId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
 
+        if (!response.ok) throw new Error('Erreur API');
+
+        const locations = await response.json();
+
+        let historyHTML = `
+            <div class="history-modal">
+                <h3><i class="fas fa-history"></i> Historique des locations</h3>
+                <div class="history-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total locations:</span>
+                        <span class="stat-value">${locations.length}</span>
+                    </div>
+                </div>
+        `;
+
+        if (locations.length === 0) {
+            historyHTML += `<p class="no-history">Aucune location trouvée pour ce client.</p>`;
+        } else {
+            historyHTML += `
+                <div class="history-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID Location</th>
+                                <th>Véhicule</th>
+                                <th>Date début</th>
+                                <th>Date fin</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            locations.forEach(location => {
+                const vehicleInfo = `${location.vehiculeMarque || ''} ${location.vehiculeModele || ''}`;
+                const formatDate = (date) => date ? new Date(date).toLocaleDateString('fr-FR') : 'N/A';
+
+                historyHTML += `
+                    <tr>
+                        <td><strong>L${location.id}</strong></td>
+                        <td>${vehicleInfo}</td>
+                        <td>${formatDate(location.dateDebut)}</td>
+                        <td>${formatDate(location.dateFin)}</td>
+                        <td style="font-weight: bold; color: #27ae60;">
+                            ${location.montantTotalLocation || 0} €
+                        </td>
+                        <td>
+                            <span class="status-badge ${getLocationStatusClass(location)}">
+                                ${getLocationStatusText(location.statut)}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            historyHTML += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        historyHTML += `</div>`;
+
+        // Créer un modal pour afficher l'historique
+        const modal = document.createElement('div');
+        modal.className = 'history-modal-overlay';
+        modal.innerHTML = `
+            <div class="history-modal-content">
+                <button class="close-history-btn" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                ${historyHTML}
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+    } catch (error) {
+        console.error('Erreur chargement historique:', error);
+        showNotification('Impossible de charger l\'historique du client', 'error');
+    }
+}
 async function deleteClient(clientId) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) return;
 

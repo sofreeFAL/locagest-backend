@@ -12,6 +12,21 @@ public class LocationDTO {
     private Long vehiculeId;
 
     // =========================
+    // INFORMATIONS CLIENT (AJOUTÉ)
+    // =========================
+    private String clientNom;
+    private String clientPrenom;
+    private String clientTelephone;
+
+    // =========================
+    // INFORMATIONS VÉHICULE (AJOUTÉ)
+    // =========================
+    private String vehiculeMarque;
+    private String vehiculeModele;
+    private String vehiculeImmatriculation;
+    private Double vehiculePrixParJour;
+
+    // =========================
     // DATES
     // =========================
     private LocalDate dateDebut;
@@ -53,6 +68,62 @@ public class LocationDTO {
 
     public void setVehiculeId(Long vehiculeId) {
         this.vehiculeId = vehiculeId;
+    }
+
+    public String getClientNom() {
+        return clientNom;
+    }
+
+    public void setClientNom(String clientNom) {
+        this.clientNom = clientNom;
+    }
+
+    public String getClientPrenom() {
+        return clientPrenom;
+    }
+
+    public void setClientPrenom(String clientPrenom) {
+        this.clientPrenom = clientPrenom;
+    }
+
+    public String getClientTelephone() {
+        return clientTelephone;
+    }
+
+    public void setClientTelephone(String clientTelephone) {
+        this.clientTelephone = clientTelephone;
+    }
+
+    public String getVehiculeMarque() {
+        return vehiculeMarque;
+    }
+
+    public void setVehiculeMarque(String vehiculeMarque) {
+        this.vehiculeMarque = vehiculeMarque;
+    }
+
+    public String getVehiculeModele() {
+        return vehiculeModele;
+    }
+
+    public void setVehiculeModele(String vehiculeModele) {
+        this.vehiculeModele = vehiculeModele;
+    }
+
+    public String getVehiculeImmatriculation() {
+        return vehiculeImmatriculation;
+    }
+
+    public void setVehiculeImmatriculation(String vehiculeImmatriculation) {
+        this.vehiculeImmatriculation = vehiculeImmatriculation;
+    }
+
+    public Double getVehiculePrixParJour() {
+        return vehiculePrixParJour;
+    }
+
+    public void setVehiculePrixParJour(Double vehiculePrixParJour) {
+        this.vehiculePrixParJour = vehiculePrixParJour;
     }
 
     public LocalDate getDateDebut() {

@@ -26,11 +26,18 @@ public class LocationMapper {
         // Client
         if (location.getClient() != null) {
             dto.setClientId(location.getClient().getId());
+            dto.setClientNom(location.getClient().getNom());
+            dto.setClientPrenom(location.getClient().getPrenom());
+            dto.setClientTelephone(location.getClient().getTelephone());
         }
 
         // Véhicule
         if (location.getVehicule() != null) {
             dto.setVehiculeId(location.getVehicule().getId());
+            dto.setVehiculeMarque(location.getVehicule().getMarque());
+            dto.setVehiculeModele(location.getVehicule().getModele());
+            dto.setVehiculeImmatriculation(location.getVehicule().getImmatriculation());
+            dto.setVehiculePrixParJour(location.getVehicule().getPrixParJour());
         }
 
         // Montant figé de la location

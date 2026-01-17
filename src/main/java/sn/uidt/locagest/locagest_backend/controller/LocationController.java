@@ -43,6 +43,17 @@ public class LocationController {
     }
 
     // =========================
+    //  RÉCUPÉRER UNE LOCATION PAR ID (NOUVEAU)
+    // USER + ADMIN
+    // =========================
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @GetMapping("/{id}")
+    public ResponseEntity<LocationDTO> getById(@PathVariable Long id) {
+        Location location = locationService.findById(id);
+        return ResponseEntity.ok(LocationMapper.toDTO(location));
+    }
+
+    // =========================
     //  LISTER LES LOCATIONS
     // (EN COURS + FUTURES)
     // USER + ADMIN
@@ -54,6 +65,38 @@ public class LocationController {
                 .stream()
                 .map(LocationMapper::toDTO)
                 .toList();
+    }
+
+    // =========================
+    //  MODIFIER UNE LOCATION COMPLÈTE (NOUVEAU)
+    // ADMIN - UNIQUEMENT POUR LOCATIONS À VENIR
+    // =========================
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(
+            @PathVariable Long id,
+            @RequestBody LocationDTO dto
+    ) {
+        Location updated = locationService.updateLocation(id, dto);
+        return ResponseEntity.ok(
+                Map.of(
+                        "message", "Location modifiée avec succès",
+                        "location", LocationMapper.toDTO(updated)
+                )
+        );
+    }
+
+    // =========================
+    //  SUPPRIMER UNE LOCATION (NOUVEAU)
+    // ADMIN - UNIQUEMENT POUR LOCATIONS À VENIR
+    // =========================
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        locationService.deleteLocation(id);
+        return ResponseEntity.ok(
+                Map.of("message", "Location supprimée avec succès")
+        );
     }
 
     // =========================
@@ -90,6 +133,17 @@ public class LocationController {
     public List<LocationDTO> historiqueParVehicule(@PathVariable Long vehiculeId) {
         return locationService.getHistoriqueParVehicule(vehiculeId)
                 .stream()
+                .map(LocationMapper::toDTO)
+                .toList();
+    }
+    // =========================
+    //  TOUTES LES LOCATIONS D'UN CLIENT (TOUS STATUTS)// USER + ADMIN// =========================
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @GetMapping("/client/{clientId}/all")
+    public List<LocationDTO> getAllByClient(@PathVariable Long clientId) {
+        return locationService.getAll()
+                .stream()
+                .filter(location -> location.getClient().getId().equals(clientId))
                 .map(LocationMapper::toDTO)
                 .toList();
     }
@@ -166,5 +220,41 @@ public class LocationController {
     @PutMapping("/{id}/retour")
     public LocationDTO retourVehicule(@PathVariable Long id) {
         return LocationMapper.toDTO(locationService.retourVehicule(id));
+    }
+
+    // =========================
+    //  ANNULER UNE LOCATION (NOUVEAU)
+    // ADMIN
+    // =========================
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/annuler")
+    public LocationDTO annuler(@PathVariable Long id) {
+        return LocationMapper.toDTO(locationService.annulerLocation(id));
+    }
+
+    // =========================
+    //  DÉMARRER UNE LOCATION (À VENIR → EN COURS) (NOUVEAU)
+    // ADMIN
+    // =========================
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/demarrer")
+    public LocationDTO demarrer(@PathVariable Long id) {
+        return LocationMapper.toDTO(locationService.demarrerLocation(id));
+    }
+
+    // =========================
+    //  METTRE À JOUR LES STATUTS MANUELLEMENT (NOUVEAU)
+    // ADMIN
+    // =========================
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/update-status")
+    public ResponseEntity<?> updateStatusManually() {
+        locationService.updateLocationsStatus();
+        return ResponseEntity.ok(
+                Map.of(
+                        "message", "Statuts mis à jour avec succès",
+                        "timestamp", LocalDate.now()
+                )
+        );
     }
 }

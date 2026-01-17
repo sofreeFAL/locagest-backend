@@ -79,7 +79,7 @@ function displayContracts(contracts) {
 
         // Calcul de la durée
         let duration = 'N/A';
-        let montant = '0 €';
+        let montant = '0 FCFA';
 
         if (location.dateDebut && location.dateFin) {
             const startDate = new Date(location.dateDebut);
@@ -352,13 +352,13 @@ async function viewContract(contractId) {
         }
 
         // Récupérer le montant - essayer différentes propriétés
-        let montant = '0 €';
+        let montant = '0 FCFA';
         if (location.montantTotalLocation !== undefined && location.montantTotalLocation !== null) {
-            montant = `${location.montantTotalLocation} €`;
+            montant = `${location.montantTotalLocation} FCFA`;
         } else if (location.montantTotal !== undefined && location.montantTotal !== null) {
-            montant = `${location.montantTotal} €`;
+            montant = `${location.montantTotal} FCFA`;
         } else if (location.montant !== undefined && location.montant !== null) {
-            montant = `${location.montant} €`;
+            montant = `${location.montant} FCFA`;
         }
 
         const details = `
@@ -642,7 +642,7 @@ async function updateLocationDetails() {
         document.getElementById('detailDateDebut').textContent = formatDate(location.dateDebut);
         document.getElementById('detailDateFin').textContent = formatDate(location.dateFin);
         document.getElementById('detailDuree').textContent = `${duration} jours`;
-        document.getElementById('detailMontant').textContent = `${location.montantTotalLocation || 0} €`;
+        document.getElementById('detailMontant').textContent = `${location.montantTotalLocation || 0} FCFA`;
 
         // 7. Afficher la section détails
         detailsDiv.style.display = 'block';
