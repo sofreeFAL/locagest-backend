@@ -467,9 +467,232 @@ function showError(message) {
 }
 
 // Voir les détails d'un contrat
-function viewContract(contractId) {
+async function viewContract(contractId) {
     console.log('Voir contrat:', contractId);
-    window.location.href = `contract-details.html?id=${contractId}`;
+    await openViewContractModal(contractId);
+}
+
+// Fonction pour ouvrir le modal de visualisation du contrat
+async function openViewContractModal(contractId) {
+    try {
+        // Afficher le modal
+        document.getElementById('viewContractModal').style.display = 'flex';
+
+        // Charger les détails
+        const token = localStorage.getItem('locagest_token');
+        const response = await fetch(`http://localhost:8080/contrats/${contractId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) throw new Error('Erreur chargement contrat');
+
+        const contract = await response.json();
+        displayContractDetails(contract);
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('contractDetails').innerHTML = `
+            <div style="color: #e74c3c; text-align: center; padding: 20px;">
+                <i class="fas fa-exclamation-circle"></i> Erreur de chargement
+            </div>
+        `;
+    }
+}
+
+// Fonction pour fermer le modal
+function closeViewContractModal() {
+    document.getElementById('viewContractModal').style.display = 'none';
+}
+
+// Fonction pour imprimer
+function printContract() {
+    window.print();
+}
+
+// Fonction pour fermer le modal
+function closeViewContractModal() {
+    document.getElementById('viewContractModal').style.display = 'none';
+}
+
+// Fonction pour imprimer
+function printContract() {
+    window.print();
+}
+
+// Fonction pour afficher les détails du contrat dans le modal
+async function openViewContractModal(contractId) {
+    try {
+        // Afficher le modal
+        document.getElementById('viewContractModal').style.display = 'flex';
+
+        // Charger les détails
+        const token = localStorage.getItem('locagest_token');
+        const response = await fetch(`http://localhost:8080/contrats/${contractId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) throw new Error('Erreur chargement contrat');
+
+        const contract = await response.json();
+        displayContractDetails(contract);
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('contractDetails').innerHTML = `
+            <div style="color: #e74c3c; text-align: center; padding: 20px;">
+                <i class="fas fa-exclamation-circle"></i> Erreur de chargement
+            </div>
+        `;
+    }
+}
+
+// Fonction pour afficher les détails (identique à celle de contracts.js)
+function displayContractDetails(contract) {
+    const details = `
+        <div class="contract-details">
+            <div class="detail-section">
+                <h4><i class="fas fa-file-contract"></i> Informations du contrat</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Numéro du contrat:</span>
+                        <span class="detail-value contract-number">${contract.numeroContrat || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Date de création:</span>
+                        <span class="detail-value">${formatDate(contract.dateCreation)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Statut:</span>
+                        <span class="detail-value status-badge ${getStatusClass(contract.statut)}">
+                            ${getStatusText(contract.statut)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4><i class="fas fa-user"></i> Client</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Nom complet:</span>
+                        <span class="detail-value">
+                            ${contract.location?.client?.prenom || ''} ${contract.location?.client?.nom || ''}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Téléphone:</span>
+                        <span class="detail-value">${contract.location?.client?.telephone || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value">${contract.location?.client?.email || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">CNI:</span>
+                        <span class="detail-value">${contract.location?.client?.numeroCni || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4><i class="fas fa-car"></i> Véhicule</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Véhicule:</span>
+                        <span class="detail-value">
+                            ${contract.location?.vehicule?.marque || ''} ${contract.location?.vehicule?.modele || ''}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Immatriculation:</span>
+                        <span class="detail-value">${contract.location?.vehicule?.immatriculation || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Prix journalier:</span>
+                        <span class="detail-value">${formatCurrency(contract.location?.vehicule?.prixParJour || 0)}/jour</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4><i class="fas fa-calendar"></i> Période de location</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Date début:</span>
+                        <span class="detail-value">${formatDate(contract.location?.dateDebut)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Date fin:</span>
+                        <span class="detail-value">${formatDate(contract.location?.dateFin)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Durée:</span>
+                        <span class="detail-value">${calculateDuration(contract.location?.dateDebut, contract.location?.dateFin)} jours</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4><i class="fas fa-money-bill-wave"></i> Montants</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Montant total:</span>
+                        <span class="detail-value amount-total">${formatCurrency(contract.location?.montantTotalLocation || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Caution:</span>
+                        <span class="detail-value">${formatCurrency(contract.caution || 0)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('contractDetails').innerHTML = details;
+}
+
+// Fonction utilitaire pour obtenir la classe CSS du statut
+function getStatusClass(status) {
+    const statut = (status || '').toUpperCase();
+    if (statut === 'ACTIF') return 'status-active';
+    if (statut === 'TERMINE' || statut === 'TERMINÉ') return 'status-completed';
+    if (statut === 'A_VENIR') return 'status-upcoming';
+    return 'status-pending';
+}
+
+// Fonction utilitaire pour obtenir le texte du statut
+function getStatusText(status) {
+    const statut = (status || '').toUpperCase();
+    if (statut === 'ACTIF') return 'ACTIF';
+    if (statut === 'TERMINE' || statut === 'TERMINÉ') return 'TERMINÉ';
+    if (statut === 'A_VENIR') return 'À VENIR';
+    return 'EN ATTENTE';
+}
+
+// Fonction pour calculer la durée en jours (si vous ne l'avez pas déjà)
+function calculateDuration(startDateStr, endDateStr) {
+    if (!startDateStr || !endDateStr) return 0;
+
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    const diffTime = Math.abs(endDate - startDate);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+// Fonction pour formater la monnaie (si vous ne l'avez pas déjà)
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'XOF',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount);
 }
 
 // Déconnexion

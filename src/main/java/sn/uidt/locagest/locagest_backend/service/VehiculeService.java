@@ -14,9 +14,11 @@ import java.util.stream.Collectors;
 public class VehiculeService {
 
     private final VehiculeRepository vehiculeRepository;
+    private final LocationService locationService;
 
-    public VehiculeService(VehiculeRepository vehiculeRepository) {
+    public VehiculeService(VehiculeRepository vehiculeRepository, LocationService locationService) {
         this.vehiculeRepository = vehiculeRepository;
+        this.locationService = locationService;
     }
 
     // =========================
@@ -24,7 +26,6 @@ public class VehiculeService {
     // =========================
     @Transactional
     public VehiculeDTO create(VehiculeDTO dto) {
-
         if (dto.getMarque() == null || dto.getMarque().isBlank()) {
             throw new BusinessException("La marque est obligatoire");
         }
@@ -37,7 +38,6 @@ public class VehiculeService {
             throw new BusinessException("L'immatriculation est obligatoire");
         }
 
-        //  PRIX OBLIGATOIRE
         if (dto.getPrixParJour() == null || dto.getPrixParJour() <= 0) {
             throw new BusinessException(
                     "Le prix de location par jour est obligatoire et doit être supérieur à 0"
@@ -54,38 +54,31 @@ public class VehiculeService {
         vehicule.setImmatriculation(dto.getImmatriculation());
         vehicule.setPrixParJour(dto.getPrixParJour());
 
-        // GÉRER LE STATUT - PARTIE AJOUTÉE
+        // GÉRER LE STATUT
         if (dto.getStatut() != null && !dto.getStatut().isBlank()) {
             String statut = dto.getStatut().toUpperCase().trim();
 
             // Valider les statuts autorisés
             if (statut.equals("DISPONIBLE") || statut.equals("LOUE") || statut.equals("EN_MAINTENANCE")) {
                 vehicule.setStatut(statut);
-
-                // Mettre à jour disponible en fonction du statut
-                if (statut.equals("DISPONIBLE")) {
-                    vehicule.setDisponible(true);
-                } else {
-                    vehicule.setDisponible(false);
-                }
             } else {
-                // Statut invalide, utiliser DISPONIBLE par défaut
-                vehicule.setStatut("DISPONIBLE");
-                vehicule.setDisponible(true);
+                throw new BusinessException("Statut invalide. Valeurs autorisées: DISPONIBLE, LOUE, EN_MAINTENANCE");
             }
         } else {
-            // Pas de statut fourni, utiliser DISPONIBLE par défaut
+            // Par défaut
             vehicule.setStatut("DISPONIBLE");
-            vehicule.setDisponible(true);
         }
 
         return toDTO(vehiculeRepository.save(vehicule));
     }
 
     // =========================
-    //  LISTER TOUS (USER + ADMIN)
+    //  LISTER TOUS (USER + ADMIN) - AVEC SYNC DES STATUTS
     // =========================
     public List<VehiculeDTO> getAll() {
+        // D'abord s'assurer que les statuts des locations sont à jour
+        locationService.updateLocationsStatus();
+
         return vehiculeRepository.findAllByOrderByIdAsc()
                 .stream()
                 .map(this::toDTO)
@@ -96,6 +89,9 @@ public class VehiculeService {
     //  VÉHICULES DISPONIBLES
     // =========================
     public List<VehiculeDTO> getDisponibles() {
+        // D'abord s'assurer que les statuts des locations sont à jour
+        locationService.updateLocationsStatus();
+
         return vehiculeRepository.findByDisponibleTrueOrderByIdAsc()
                 .stream()
                 .map(this::toDTO)
@@ -106,6 +102,9 @@ public class VehiculeService {
     //  TROUVER PAR ID
     // =========================
     public VehiculeDTO getById(Long id) {
+        // S'assurer que les statuts sont à jour
+        locationService.updateLocationsStatus();
+
         Vehicule vehicule = vehiculeRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Véhicule introuvable"));
         return toDTO(vehicule);
@@ -116,7 +115,6 @@ public class VehiculeService {
     // =========================
     @Transactional
     public VehiculeDTO update(Long id, VehiculeDTO dto) {
-
         Vehicule vehicule = vehiculeRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Véhicule introuvable"));
 
@@ -132,17 +130,26 @@ public class VehiculeService {
             throw new BusinessException("Le prix par jour doit être supérieur à 0");
         }
 
-        // INTERDICTION DE MODIFIER LE PRIX SI LE VÉHICULE EST LOUÉ
-        if (!vehicule.isDisponible()
-                && !vehicule.getPrixParJour().equals(dto.getPrixParJour())) {
-            throw new BusinessException(
-                    "Impossible de modifier le prix : le véhicule est actuellement loué"
-            );
+        // Vérifier si le véhicule est loué
+        if ("LOUE".equals(vehicule.getStatut())) {
+            // Si le véhicule est loué, interdire certaines modifications
+            if (!vehicule.getPrixParJour().equals(dto.getPrixParJour())) {
+                throw new BusinessException(
+                        "Impossible de modifier le prix : le véhicule est actuellement loué"
+                );
+            }
+
+            // Si on essaye de changer le statut autre qu'en LOUE
+            if (dto.getStatut() != null && !dto.getStatut().isBlank() &&
+                    !"LOUE".equals(dto.getStatut().toUpperCase())) {
+                throw new BusinessException(
+                        "Impossible de changer le statut : le véhicule est actuellement loué"
+                );
+            }
         }
 
-        //  IMMATRIICULATION UNIQUE
+        // Vérifier l'immatriculation unique
         if (!vehicule.getImmatriculation().equals(dto.getImmatriculation())) {
-
             if (dto.getImmatriculation() == null || dto.getImmatriculation().isBlank()) {
                 throw new BusinessException("L'immatriculation est obligatoire");
             }
@@ -154,13 +161,20 @@ public class VehiculeService {
             vehicule.setImmatriculation(dto.getImmatriculation());
         }
 
-        // METTRE À JOUR LE STATUT SI FOURNI - PARTIE AJOUTÉE
+        // METTRE À JOUR LE STATUT
         if (dto.getStatut() != null && !dto.getStatut().isBlank()) {
             String statut = dto.getStatut().toUpperCase().trim();
-            if (statut.equals("DISPONIBLE") || statut.equals("LOUE") || statut.equals("EN_MAINTENANCE")) {
-                vehicule.setStatut(statut);
-                vehicule.setDisponible(statut.equals("DISPONIBLE"));
+
+            if (!statut.equals("DISPONIBLE") && !statut.equals("LOUE") && !statut.equals("EN_MAINTENANCE")) {
+                throw new BusinessException("Statut invalide. Valeurs autorisées: DISPONIBLE, LOUE, EN_MAINTENANCE");
             }
+
+            // Vérifier les transitions de statut
+            if ("LOUE".equals(vehicule.getStatut()) && !"LOUE".equals(statut)) {
+                throw new BusinessException("Un véhicule loué ne peut pas changer de statut tant qu'il n'est pas retourné");
+            }
+
+            vehicule.setStatut(statut);
         }
 
         vehicule.setMarque(dto.getMarque());
@@ -175,14 +189,13 @@ public class VehiculeService {
     // =========================
     @Transactional
     public void delete(Long id) {
-
         Vehicule vehicule = vehiculeRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Véhicule introuvable"));
 
-        //  INTERDICTION DE SUPPRIMER UN VÉHICULE LOUÉ OU EN MAINTENANCE
+        // Vérifier si le véhicule est disponible
         if (!vehicule.isDisponible()) {
             throw new BusinessException(
-                    "Impossible de supprimer un véhicule qui n'est pas disponible"
+                    "Impossible de supprimer un véhicule qui n'est pas disponible (statut: " + vehicule.getStatut() + ")"
             );
         }
 
@@ -198,6 +211,9 @@ public class VehiculeService {
             String immatriculation,
             Boolean disponible
     ) {
+        // S'assurer que les statuts des locations sont à jour
+        locationService.updateLocationsStatus();
+
         return vehiculeRepository.search(
                         normalize(marque),
                         normalize(modele),
@@ -206,6 +222,38 @@ public class VehiculeService {
                 ).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    // =========================
+    //  MÉTHODE POUR METTRE UN VÉHICULE EN MAINTENANCE
+    // =========================
+    @Transactional
+    public VehiculeDTO mettreEnMaintenance(Long id) {
+        Vehicule vehicule = vehiculeRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Véhicule introuvable"));
+
+        if ("LOUE".equals(vehicule.getStatut())) {
+            throw new BusinessException("Impossible de mettre en maintenance un véhicule loué");
+        }
+
+        vehicule.setStatut("EN_MAINTENANCE");
+        return toDTO(vehiculeRepository.save(vehicule));
+    }
+
+    // =========================
+    //  MÉTHODE POUR SORTIR DE MAINTENANCE
+    // =========================
+    @Transactional
+    public VehiculeDTO sortirDeMaintenance(Long id) {
+        Vehicule vehicule = vehiculeRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Véhicule introuvable"));
+
+        if (!"EN_MAINTENANCE".equals(vehicule.getStatut())) {
+            throw new BusinessException("Le véhicule n'est pas en maintenance");
+        }
+
+        vehicule.setStatut("DISPONIBLE");
+        return toDTO(vehiculeRepository.save(vehicule));
     }
 
     // =========================
@@ -226,7 +274,7 @@ public class VehiculeService {
         dto.setImmatriculation(vehicule.getImmatriculation());
         dto.setPrixParJour(vehicule.getPrixParJour());
         dto.setDisponible(vehicule.isDisponible());
-        dto.setStatut(vehicule.getStatut()); // IMPORTANT: mapper le statut
+        dto.setStatut(vehicule.getStatut());
         return dto;
     }
 }

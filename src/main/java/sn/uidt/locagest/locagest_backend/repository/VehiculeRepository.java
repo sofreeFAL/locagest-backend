@@ -9,16 +9,17 @@ import java.util.List;
 
 public interface VehiculeRepository extends JpaRepository<Vehicule, Long> {
 
-    //  Vérifier doublon
+    // Vérifier doublon
     boolean existsByImmatriculation(String immatriculation);
 
-    //  Liste ordonnée
+    // Liste ordonnée
     List<Vehicule> findAllByOrderByIdAsc();
 
-    //  Véhicules disponibles
+    // Véhicules disponibles (basé sur le statut)
+    @Query("SELECT v FROM Vehicule v WHERE v.statut = 'DISPONIBLE' ORDER BY v.id ASC")
     List<Vehicule> findByDisponibleTrueOrderByIdAsc();
 
-    //  Recherche robuste multi-critères
+    // Recherche robuste multi-critères (basée sur le statut)
     @Query("""
         SELECT v FROM Vehicule v
         WHERE (:marque IS NULL OR :marque = '' 
@@ -27,7 +28,9 @@ public interface VehiculeRepository extends JpaRepository<Vehicule, Long> {
               OR LOWER(v.modele) LIKE LOWER(CONCAT('%', :modele, '%')))
           AND (:immatriculation IS NULL OR :immatriculation = '' 
               OR LOWER(v.immatriculation) LIKE LOWER(CONCAT('%', :immatriculation, '%')))
-          AND (:disponible IS NULL OR v.disponible = :disponible)
+          AND (:disponible IS NULL 
+              OR (:disponible = true AND v.statut = 'DISPONIBLE')
+              OR (:disponible = false AND v.statut != 'DISPONIBLE'))
         ORDER BY v.id ASC
     """)
     List<Vehicule> search(

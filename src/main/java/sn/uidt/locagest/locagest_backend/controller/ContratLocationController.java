@@ -6,12 +6,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import sn.uidt.locagest.locagest_backend.model.ContratLocation;
-import sn.uidt.locagest.locagest_backend.model.Location;  // AJOUTER CET IMPORT
 import sn.uidt.locagest.locagest_backend.model.StatutContrat;
 import sn.uidt.locagest.locagest_backend.service.ContratLocationService;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/contrats")
@@ -109,13 +109,13 @@ public class ContratLocationController {
     }
 
     // =====================================================
-    //  LISTE DES LOCATIONS SANS CONTRAT
+    //  LISTE DES LOCATIONS SANS CONTRAT (FORMATÉES)
     // USER + ADMIN
     // =====================================================
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @GetMapping("/locations/sans-contrat")
-    public ResponseEntity<List<Location>> getLocationsSansContrat() {
-        return ResponseEntity.ok(service.getLocationsSansContrat());
+    public ResponseEntity<List<Map<String, Object>>> getLocationsSansContrat() {
+        return ResponseEntity.ok(service.getLocationsSansContratFormatted());
     }
 
     // =====================================================

@@ -232,6 +232,16 @@ public class LocationController {
         return LocationMapper.toDTO(locationService.annulerLocation(id));
     }
 
+// =====================================================
+//  RÉPARER SYNCHRONISATION (ADMIN)
+// =====================================================
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/reparer-synchronisation")
+    public ResponseEntity<?> reparerSynchronisation() {
+        String result = locationService.reparerSynchronisation();
+        return ResponseEntity.ok(Map.of("message", result));
+    }
+
     // =========================
     //  DÉMARRER UNE LOCATION (À VENIR → EN COURS) (NOUVEAU)
     // ADMIN

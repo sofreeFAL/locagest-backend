@@ -15,6 +15,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('locationStartDate').min = today;
 });
 
+// Variables globales pour stocker les données
+let allClients = [];
+let allVehicles = [];
+
 async function loadLocations() {
     try {
         showLoadingLocations();
@@ -87,20 +91,7 @@ function displayLocations(locations) {
             duration = `${diffDays} jours`;
         }
 
-        // DEBUG: Vérifier les dates
-        const today = new Date();
-        const startDate = location.dateDebut ? new Date(location.dateDebut) : null;
-        const endDate = location.dateFin ? new Date(location.dateFin) : null;
-        const todayStr = today.toISOString().split('T')[0];
-        const startStr = startDate ? startDate.toISOString().split('T')[0] : null;
-
-        console.log(`Location ${location.id}:`);
-        console.log(`- Statut API: ${location.statut}`);
-        console.log(`- Date début: ${startStr}`);
-        console.log(`- Date aujourd'hui: ${todayStr}`);
-        console.log(`- Comparaison: ${startStr} > ${todayStr} = ${startStr > todayStr}`);
-
-        // Badge de statut - PRIORITÉ AU STATUT DE L'API
+        // Badge de statut
         let statusBadge = '';
         let statusClass = '';
 
@@ -120,25 +111,6 @@ function displayLocations(locations) {
             statusBadge = '<span class="badge badge-secondary">Annulée</span>';
             statusClass = 'status-annulee';
         }
-        else {
-            // Si pas de statut API, déterminer par dates
-            const today = new Date();
-            const startDate = location.dateDebut ? new Date(location.dateDebut) : null;
-            const endDate = location.dateFin ? new Date(location.dateFin) : null;
-
-            if (startDate && startDate > today) {
-                statusBadge = '<span class="badge badge-info">À venir</span>';
-                statusClass = 'status-a-venir';
-            }
-            else if (endDate && endDate < today) {
-                statusBadge = '<span class="badge badge-success">Terminée</span>';
-                statusClass = 'status-termine';
-            }
-            else {
-                statusBadge = '<span class="badge badge-warning">En cours</span>';
-                statusClass = 'status-en-cours';
-            }
-        }
 
         return `
         <tr>
@@ -149,7 +121,7 @@ function displayLocations(locations) {
             <td>${formatDate(location.dateFin)}</td>
             <td>${duration}</td>
             <td style="font-weight: bold; color: #27ae60;">
-                ${location.montantTotalLocation || 0} €
+                ${formatCurrency(location.montantTotalLocation || 0)}
             </td>
             <td>${statusBadge}</td>
             <td>
@@ -170,6 +142,16 @@ function displayLocations(locations) {
     }).join('');
 }
 
+// Fonction pour formater la monnaie
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'XOF',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount);
+}
+
 async function loadClientsForLocation() {
     try {
         const token = localStorage.getItem('locagest_token');
@@ -181,15 +163,18 @@ async function loadClientsForLocation() {
         });
 
         if (response.ok) {
-            const clients = await response.json();
+            allClients = await response.json();
             const select = document.getElementById('locationClient');
             select.innerHTML = '<option value="">Sélectionner un client</option>';
-            clients.forEach(client => {
+            allClients.forEach(client => {
                 const option = document.createElement('option');
                 option.value = client.id;
                 option.textContent = `${client.prenom} ${client.nom} - ${client.telephone}`;
                 select.appendChild(option);
             });
+
+            // Mettre à jour le select d'édition également
+            updateEditClientSelect();
         }
     } catch (error) {
         console.error('Erreur chargement clients:', error);
@@ -199,9 +184,7 @@ async function loadClientsForLocation() {
 async function loadVehiclesForLocation() {
     try {
         const token = localStorage.getItem('locagest_token');
-
-        // VÉRIFIEZ CETTE URL - peut-être '/vehicules/disponibles' au lieu de '/vehicles/disponibles'
-        const response = await fetch('http://localhost:8080/vehicules/disponibles', {
+        const response = await fetch('http://localhost:8080/vehicules', {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -209,19 +192,22 @@ async function loadVehiclesForLocation() {
         });
 
         if (response.ok) {
-            const vehicles = await response.json();
+            allVehicles = await response.json();
             const select = document.getElementById('locationVehicle');
             select.innerHTML = '<option value="">Sélectionner un véhicule</option>';
-            vehicles.forEach(vehicle => {
+            allVehicles.forEach(vehicle => {
                 const option = document.createElement('option');
                 option.value = vehicle.id;
-                option.textContent = `${vehicle.marque} ${vehicle.modele} - ${vehicle.immatriculation} (${vehicle.prixParJour} €/jour)`;
+                option.textContent = `${vehicle.marque} ${vehicle.modele} - ${vehicle.immatriculation} (${formatCurrency(vehicle.prixParJour)}/jour)`;
                 option.setAttribute('data-price', vehicle.prixParJour || 0);
                 select.appendChild(option);
             });
+
+            // Mettre à jour le select d'édition également
+            updateEditVehicleSelect();
         } else {
             console.error('Erreur API véhicules:', response.status);
-            showNotification('Impossible de charger les véhicules disponibles', 'error');
+            showNotification('Impossible de charger les véhicules', 'error');
         }
     } catch (error) {
         console.error('Erreur chargement véhicules:', error);
@@ -229,35 +215,32 @@ async function loadVehiclesForLocation() {
     }
 }
 
-async function updateVehicleList() {
-    try {
-        const token = localStorage.getItem('locagest_token');
-        const response = await fetch('http://localhost:8080/vehicles/disponibles', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
+// Mettre à jour le select des clients dans le modal d'édition
+function updateEditClientSelect() {
+    const select = document.getElementById('editClient');
+    if (!select) return;
 
-        if (response.ok) {
-            const vehicles = await response.json();
-            const select = document.getElementById('locationVehicle');
-            select.innerHTML = '<option value="">Sélectionner un véhicule disponible</option>';
+    select.innerHTML = '<option value="">Sélectionner un client</option>';
+    allClients.forEach(client => {
+        const option = document.createElement('option');
+        option.value = client.id;
+        option.textContent = `${client.prenom} ${client.nom} - ${client.telephone}`;
+        select.appendChild(option);
+    });
+}
 
-            vehicles.forEach(vehicle => {
-                const option = document.createElement('option');
-                option.value = vehicle.id;
-                option.textContent = `${vehicle.marque} ${vehicle.modele} (${vehicle.immatriculation}) - ${vehicle.prixParJour} €/jour`;
-                option.setAttribute('data-price', vehicle.prixParJour || 0);
-                select.appendChild(option);
-            });
+// Mettre à jour le select des véhicules dans le modal d'édition
+function updateEditVehicleSelect() {
+    const select = document.getElementById('editVehicle');
+    if (!select) return;
 
-            // Réinitialiser le calcul
-            calculateAmount();
-        }
-    } catch (error) {
-        console.error('Erreur mise à jour véhicules:', error);
-    }
+    select.innerHTML = '<option value="">Sélectionner un véhicule</option>';
+    allVehicles.forEach(vehicle => {
+        const option = document.createElement('option');
+        option.value = vehicle.id;
+        option.textContent = `${vehicle.marque} ${vehicle.modele} - ${vehicle.immatriculation} (${formatCurrency(vehicle.prixParJour)}/jour)`;
+        select.appendChild(option);
+    });
 }
 
 function calculateAmount() {
@@ -268,7 +251,7 @@ function calculateAmount() {
     const selectedVehicle = vehicleSelect.options[vehicleSelect.selectedIndex];
     const dailyPrice = selectedVehicle ? parseFloat(selectedVehicle.getAttribute('data-price') || 0) : 0;
 
-    document.getElementById('dailyPriceDisplay').textContent = `${dailyPrice} €`;
+    document.getElementById('dailyPriceDisplay').textContent = formatCurrency(dailyPrice);
 
     if (startDateInput.value && endDateInput.value) {
         const startDate = new Date(startDateInput.value);
@@ -276,7 +259,7 @@ function calculateAmount() {
 
         if (endDate < startDate) {
             document.getElementById('daysCountDisplay').textContent = 'Date invalide';
-            document.getElementById('totalAmountDisplay').textContent = '0 €';
+            document.getElementById('totalAmountDisplay').textContent = formatCurrency(0);
             document.getElementById('locationTotalAmount').value = 0;
             return;
         }
@@ -286,11 +269,11 @@ function calculateAmount() {
         const totalAmount = diffDays * dailyPrice;
 
         document.getElementById('daysCountDisplay').textContent = diffDays;
-        document.getElementById('totalAmountDisplay').textContent = `${totalAmount} €`;
+        document.getElementById('totalAmountDisplay').textContent = formatCurrency(totalAmount);
         document.getElementById('locationTotalAmount').value = totalAmount;
     } else {
         document.getElementById('daysCountDisplay').textContent = '0';
-        document.getElementById('totalAmountDisplay').textContent = '0 €';
+        document.getElementById('totalAmountDisplay').textContent = formatCurrency(0);
         document.getElementById('locationTotalAmount').value = 0;
     }
 }
@@ -511,7 +494,7 @@ async function viewLocation(locationId) {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Prix journalier:</span>
-                            <span class="detail-value">${vehiculePrixParJour} €/jour</span>
+                            <span class="detail-value">${formatCurrency(vehiculePrixParJour)}/jour</span>
                         </div>
                     </div>
                 </div>
@@ -540,7 +523,7 @@ async function viewLocation(locationId) {
                         <div class="detail-item">
                             <span class="detail-label">Montant total:</span>
                             <span class="detail-value" style="color: #27ae60; font-weight: bold;">
-                                ${location.montantTotalLocation || 0} €
+                                ${formatCurrency(location.montantTotalLocation || 0)}
                             </span>
                         </div>
                     </div>
@@ -632,7 +615,7 @@ function showNotification(message, type = 'info') {
         display: flex;
         align-items: center;
         gap: 10px;
-        background-color: ${type === 'success' ? '#4caf50' : '#f44336'};
+        background-color: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#3498db'};
         animation: slideIn 0.3s ease-out;
     `;
     document.body.appendChild(notification);
@@ -646,8 +629,20 @@ function logout() {
     localStorage.removeItem('locagest_user');
     window.location.href = 'index.html';
 }
+
+// =====================================================
+//  MODIFIER UNE LOCATION
+// =====================================================
+async function editLocation(locationId) {
+    await openEditLocationModal(locationId);
+}
+
 async function openEditLocationModal(locationId) {
     try {
+        // Afficher le modal
+        document.getElementById('editLocationModal').style.display = 'flex';
+
+        // Charger les données de la location
         const token = localStorage.getItem('locagest_token');
         const response = await fetch(`http://localhost:8080/locations/${locationId}`, {
             headers: {
@@ -656,31 +651,60 @@ async function openEditLocationModal(locationId) {
             }
         });
 
-        if (!response.ok) throw new Error('Erreur chargement location');
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Erreur ${response.status}: ${errorText}`);
+        }
 
         const location = await response.json();
+        console.log('Location à modifier:', location);
 
         // Remplir le formulaire d'édition
         document.getElementById('editLocationId').value = location.id;
-        document.getElementById('editClient').value = location.clientId;
-        document.getElementById('editVehicle').value = location.vehiculeId;
-        document.getElementById('editStartDate').value = location.dateDebut;
-        document.getElementById('editEndDate').value = location.dateFin;
-        document.getElementById('editTotalAmount').value = location.montantTotalLocation;
 
-        // Afficher le modal
-        document.getElementById('editLocationModal').style.display = 'flex';
+        // Formater les dates pour l'input date (YYYY-MM-DD)
+        const formatDateForInput = (dateString) => {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toISOString().split('T')[0];
+        };
+
+        document.getElementById('editStartDate').value = formatDateForInput(location.dateDebut);
+        document.getElementById('editEndDate').value = formatDateForInput(location.dateFin);
+        document.getElementById('editTotalAmount').value = location.montantTotalLocation || 0;
+        document.getElementById('editLocationStatus').value = location.statut || 'A_VENIR';
+        document.getElementById('editNotes').value = location.notes || '';
+
+        // Charger les listes déroulantes
+        await loadEditSelects();
+
+        // Définir les valeurs sélectionnées
+        setTimeout(() => {
+            document.getElementById('editClient').value = location.clientId || location.client?.id || '';
+            document.getElementById('editVehicle').value = location.vehiculeId || location.vehicule?.id || '';
+        }, 100);
 
     } catch (error) {
         console.error('Erreur:', error);
         showNotification('Impossible de charger la location pour modification', 'error');
+        closeEditLocationModal();
     }
 }
-// =====================================================
-//  MODIFIER UNE LOCATION
-// =====================================================
-async function editLocation(locationId) {
-    openEditLocationModal(locationId);
+
+async function loadEditSelects() {
+    // Charger les clients si pas déjà fait
+    if (allClients.length === 0) {
+        await loadClientsForLocation();
+    }
+
+    // Charger les véhicules si pas déjà fait
+    if (allVehicles.length === 0) {
+        await loadVehiclesForLocation();
+    }
+
+    // Mettre à jour les selects
+    updateEditClientSelect();
+    updateEditVehicleSelect();
 }
 
 async function saveEditedLocation() {
@@ -690,9 +714,11 @@ async function saveEditedLocation() {
     const startDate = document.getElementById('editStartDate').value;
     const endDate = document.getElementById('editEndDate').value;
     const totalAmount = document.getElementById('editTotalAmount').value;
+    const status = document.getElementById('editLocationStatus').value;
+    const notes = document.getElementById('editNotes').value;
 
     // Validation
-    if (!clientId || !vehicleId || !startDate || !endDate) {
+    if (!clientId || !vehicleId || !startDate || !endDate || !totalAmount) {
         showNotification('Veuillez remplir tous les champs obligatoires', 'error');
         return;
     }
@@ -707,8 +733,12 @@ async function saveEditedLocation() {
         vehiculeId: parseInt(vehicleId),
         dateDebut: startDate,
         dateFin: endDate,
-        montantTotalLocation: parseFloat(totalAmount)
+        montantTotalLocation: parseFloat(totalAmount),
+        statut: status,
+        notes: notes || null
     };
+
+    console.log('Mise à jour location:', locationData);
 
     try {
         const token = localStorage.getItem('locagest_token');
@@ -735,6 +765,7 @@ async function saveEditedLocation() {
         showNotification('Erreur lors de la modification: ' + error.message, 'error');
     }
 }
+
 // =====================================================
 //  SUPPRIMER UNE LOCATION
 // =====================================================

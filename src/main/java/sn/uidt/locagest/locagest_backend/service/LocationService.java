@@ -1,6 +1,7 @@
 package sn.uidt.locagest.locagest_backend.service;
 
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class LocationService {
@@ -43,7 +45,6 @@ public class LocationService {
     // =====================================================
     @Transactional
     public Location create(LocationDTO dto) {
-
         if (dto.getClientId() == null || dto.getVehiculeId() == null) {
             throw new BusinessException("Client et véhicule obligatoires");
         }
@@ -62,70 +63,49 @@ public class LocationService {
         Vehicule vehicule = vehiculeRepository.findById(dto.getVehiculeId())
                 .orElseThrow(() -> new BusinessException("Véhicule introuvable"));
 
-        // Vérifier si le véhicule est disponible (pas déjà loué ET pas en maintenance)
-        if (!vehicule.isDisponible()) {
-            throw new BusinessException("Véhicule non disponible (déjà loué ou en maintenance)");
+        // Vérifier si le véhicule est disponible
+        if (!"DISPONIBLE".equals(vehicule.getStatut())) {
+            throw new BusinessException("Véhicule non disponible (statut: " + vehicule.getStatut() + ")");
         }
 
-        long nbJours = ChronoUnit.DAYS.between(
-                dto.getDateDebut(),
-                dto.getDateFin()
-        );
+        long nbJours = ChronoUnit.DAYS.between(dto.getDateDebut(), dto.getDateFin());
         if (nbJours <= 0) nbJours = 1;
 
         double montantTotal = nbJours * vehicule.getPrixParJour();
 
-        // --- DÉTERMINER LE STATUT INITIAL ---
+        // Calculer le statut initial
         LocalDate today = LocalDate.now();
-        StatutLocation statutInitial;
+        StatutLocation statutInitial = calculateStatus(dto.getDateDebut(), dto.getDateFin(), today);
 
-        if (dto.getDateDebut().isAfter(today)) {
-            // Date de début dans le futur = À VENIR
-            statutInitial = StatutLocation.A_VENIR;
-        } else if (dto.getDateDebut().isEqual(today) ||
-                (dto.getDateDebut().isBefore(today) && dto.getDateFin().isAfter(today))) {
-            // Commence aujourd'hui ou est en cours = EN COURS
-            statutInitial = StatutLocation.EN_COURS;
-        } else if (dto.getDateFin().isBefore(today)) {
-            // Date de fin déjà passée = TERMINÉE
-            statutInitial = StatutLocation.TERMINEE;
-        } else {
-            // Par défaut
-            statutInitial = StatutLocation.EN_COURS;
-        }
-
-        // --- LOCATION ---
+        // Créer la location
         Location location = new Location();
         location.setClient(client);
         location.setVehicule(vehicule);
         location.setDateDebut(dto.getDateDebut());
         location.setDateFin(dto.getDateFin());
         location.setMontantTotalLocation(montantTotal);
-        location.setStatut(statutInitial); // Utiliser le statut calculé
+        location.setStatut(statutInitial);
 
-        // IMPORTANT : Marquer le véhicule comme indisponible seulement si la location est EN_COURS
-        // Si c'est A_VENIR, le véhicule reste disponible pour d'autres locations futures
-        if (statutInitial == StatutLocation.EN_COURS) {
-            vehicule.setDisponible(false);
-        }
+        // Mettre à jour le statut du véhicule
+        updateVehicleStatusBasedOnLocation(vehicule, statutInitial);
 
         Location savedLocation = locationRepository.save(location);
 
-        // --- CONTRAT AUTO ---
+        // Créer le contrat
         ContratLocation contrat = new ContratLocation();
         contrat.setLocation(savedLocation);
         contrat.setNumeroContrat("CTR-" + UUID.randomUUID());
         contrat.setDateCreation(LocalDate.now());
 
-        // Déterminer le statut du contrat en fonction du statut de la location
+        // Déterminer le statut du contrat
         if (statutInitial == StatutLocation.A_VENIR) {
-            contrat.setStatut(StatutContrat.EN_ATTENTE); // Contrat en attente
+            contrat.setStatut(StatutContrat.EN_ATTENTE);
         } else if (statutInitial == StatutLocation.EN_COURS) {
-            contrat.setStatut(StatutContrat.ACTIF); // Contrat actif
+            contrat.setStatut(StatutContrat.ACTIF);
         } else if (statutInitial == StatutLocation.TERMINEE) {
-            contrat.setStatut(StatutContrat.TERMINE); // Contrat terminé
+            contrat.setStatut(StatutContrat.TERMINE);
         } else {
-            contrat.setStatut(StatutContrat.ACTIF); // Par défaut
+            contrat.setStatut(StatutContrat.ACTIF);
         }
 
         contratRepository.save(contrat);
@@ -134,9 +114,24 @@ public class LocationService {
     }
 
     // =====================================================
-    //  LISTER TOUTES LES LOCATIONS
+    //  LISTER TOUTES LES LOCATIONS (AVEC RECALCUL DES STATUTS)
     // =====================================================
     public List<Location> getAll() {
+        List<Location> locations = locationRepository.findAll();
+        LocalDate today = LocalDate.now();
+
+        // Recalculer les statuts avant de retourner
+        for (Location location : locations) {
+            if (location.getStatut() != StatutLocation.ANNULEE) {
+                StatutLocation newStatut = calculateStatus(location.getDateDebut(),
+                        location.getDateFin(),
+                        today);
+                if (!location.getStatut().equals(newStatut)) {
+                    updateLocationAndVehicleStatus(location, newStatut);
+                }
+            }
+        }
+
         return locationRepository.findAll();
     }
 
@@ -144,6 +139,9 @@ public class LocationService {
     //  LISTER LES LOCATIONS EN COURS
     // =====================================================
     public List<Location> getLocationsEnCours() {
+        // D'abord mettre à jour tous les statuts
+        updateLocationsStatus();
+
         return locationRepository.findByStatut(StatutLocation.EN_COURS);
     }
 
@@ -151,6 +149,7 @@ public class LocationService {
     //  LISTER LES LOCATIONS À VENIR
     // =====================================================
     public List<Location> getLocationsAVenir() {
+        updateLocationsStatus();
         return locationRepository.findByStatut(StatutLocation.A_VENIR);
     }
 
@@ -158,14 +157,17 @@ public class LocationService {
     //  HISTORIQUE (LOCATIONS TERMINÉES)
     // =====================================================
     public List<Location> getHistorique() {
+        updateLocationsStatus();
         return locationRepository.findByStatut(StatutLocation.TERMINEE);
     }
 
     public List<Location> getHistoriqueParClient(Long clientId) {
+        updateLocationsStatus();
         return locationRepository.findHistoriqueParClient(clientId);
     }
 
     public List<Location> getHistoriqueParVehicule(Long vehiculeId) {
+        updateLocationsStatus();
         return locationRepository.findHistoriqueParVehicule(vehiculeId);
     }
 
@@ -173,6 +175,9 @@ public class LocationService {
     //  RECHERCHE AVANCÉE
     // =====================================================
     public List<Location> searchAdvanced(LocationSearchDTO dto) {
+        // Mettre à jour les statuts avant recherche
+        updateLocationsStatus();
+
         return locationRepository.searchAdvanced(
                 dto.getClientId(),
                 dto.getVehiculeId(),
@@ -191,12 +196,16 @@ public class LocationService {
     // =====================================================
     @Transactional
     public Location modifierPrixLocation(Long id, Double nouveauMontant) {
-
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Location introuvable"));
 
-        // Vérifier que la location est À VENIR
-        if (location.getStatut() != StatutLocation.A_VENIR) {
+        // Recalculer le statut avant vérification
+        LocalDate today = LocalDate.now();
+        StatutLocation currentStatus = calculateStatus(location.getDateDebut(),
+                location.getDateFin(),
+                today);
+
+        if (currentStatus != StatutLocation.A_VENIR) {
             throw new BusinessException("Seules les locations À VENIR peuvent être modifiées");
         }
 
@@ -213,17 +222,21 @@ public class LocationService {
     // =====================================================
     @Transactional
     public Location prolongerLocation(Long id, LocalDate nouvelleDateFin) {
-
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Location introuvable"));
 
-        if (location.getStatut() == StatutLocation.TERMINEE ||
-                location.getStatut() == StatutLocation.ANNULEE) {
+        // Recalculer le statut
+        LocalDate today = LocalDate.now();
+        StatutLocation currentStatus = calculateStatus(location.getDateDebut(),
+                location.getDateFin(),
+                today);
+
+        if (currentStatus == StatutLocation.TERMINEE ||
+                currentStatus == StatutLocation.ANNULEE) {
             throw new BusinessException("Location terminée ou annulée");
         }
 
-        // Vérifier que la prolongation est pour une location EN COURS
-        if (location.getStatut() != StatutLocation.EN_COURS) {
+        if (currentStatus != StatutLocation.EN_COURS) {
             throw new BusinessException("Seules les locations EN COURS peuvent être prolongées");
         }
 
@@ -231,10 +244,7 @@ public class LocationService {
             throw new BusinessException("La nouvelle date doit être après la date de fin actuelle");
         }
 
-        long joursAjoutes = ChronoUnit.DAYS.between(
-                location.getDateFin(),
-                nouvelleDateFin
-        );
+        long joursAjoutes = ChronoUnit.DAYS.between(location.getDateFin(), nouvelleDateFin);
 
         if (joursAjoutes <= 0) {
             throw new BusinessException("Aucun jour ajouté");
@@ -243,9 +253,7 @@ public class LocationService {
         double supplement = joursAjoutes * location.getVehicule().getPrixParJour();
 
         location.setDateFin(nouvelleDateFin);
-        location.setMontantTotalLocation(
-                location.getMontantTotalLocation() + supplement
-        );
+        location.setMontantTotalLocation(location.getMontantTotalLocation() + supplement);
 
         return locationRepository.save(location);
     }
@@ -255,7 +263,6 @@ public class LocationService {
     // =====================================================
     @Transactional
     public Location retourVehicule(Long id) {
-
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Location introuvable"));
 
@@ -270,20 +277,19 @@ public class LocationService {
         }
 
         // Vérifier si le paiement a été effectué
-        boolean paiementEffectue =
-                paiementRepository.existsByLocationIdAndStatut(id, StatutPaiement.PAYE);
+        boolean paiementEffectue = paiementRepository.existsByLocationIdAndStatut(id, StatutPaiement.PAYE);
 
         if (!paiementEffectue) {
             throw new BusinessException("Retour refusé : paiement non effectué");
         }
 
         // Libérer le véhicule
+        location.getVehicule().setStatut("DISPONIBLE");
         location.getVehicule().setDisponible(true);
         location.setStatut(StatutLocation.TERMINEE);
 
-        // --- FIN CONTRAT ---
-        ContratLocation contrat = contratRepository
-                .findByLocationId(id)
+        // Mettre à jour le contrat
+        ContratLocation contrat = contratRepository.findByLocationId(id)
                 .orElseThrow(() -> new BusinessException("Contrat introuvable"));
 
         contrat.setStatut(StatutContrat.TERMINE);
@@ -291,13 +297,50 @@ public class LocationService {
 
         return locationRepository.save(location);
     }
+    // =====================================================
+//  RÉPARER LA SYNCHRONISATION LOCATIONS-VÉHICULES
+// =====================================================
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public String reparerSynchronisation() {
+        List<Vehicule> vehicules = vehiculeRepository.findAll();
+        int corrections = 0;
 
+        for (Vehicule vehicule : vehicules) {
+            // Trouver toutes les locations pour ce véhicule
+            List<Location> locations = locationRepository.findAll().stream()
+                    .filter(l -> l.getVehicule().getId().equals(vehicule.getId()))
+                    .filter(l -> l.getStatut() != StatutLocation.ANNULEE)
+                    .collect(Collectors.toList());
+
+            // Vérifier s'il y a une location en cours
+            boolean hasLocationEnCours = locations.stream()
+                    .anyMatch(l -> l.getStatut() == StatutLocation.EN_COURS);
+
+            if (hasLocationEnCours) {
+                // Véhicule devrait être LOUÉ
+                if (!"LOUE".equals(vehicule.getStatut())) {
+                    vehicule.setStatut("LOUE");
+                    vehiculeRepository.save(vehicule);
+                    corrections++;
+                }
+            } else {
+                // Véhicule devrait être DISPONIBLE (sauf s'il est en maintenance)
+                if ("LOUE".equals(vehicule.getStatut())) {
+                    vehicule.setStatut("DISPONIBLE");
+                    vehiculeRepository.save(vehicule);
+                    corrections++;
+                }
+            }
+        }
+
+        return corrections + " véhicules corrigés sur " + vehicules.size();
+    }
     // =====================================================
     //  ANNULER UNE LOCATION (ADMIN)
     // =====================================================
     @Transactional
     public Location annulerLocation(Long id) {
-
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Location introuvable"));
 
@@ -308,14 +351,14 @@ public class LocationService {
 
         // Libérer le véhicule si la location était EN_COURS
         if (location.getStatut() == StatutLocation.EN_COURS) {
+            location.getVehicule().setStatut("DISPONIBLE");
             location.getVehicule().setDisponible(true);
         }
 
         location.setStatut(StatutLocation.ANNULEE);
 
-        // --- ANNULER LE CONTRAT ---
-        ContratLocation contrat = contratRepository
-                .findByLocationId(id)
+        // Annuler le contrat
+        ContratLocation contrat = contratRepository.findByLocationId(id)
                 .orElseThrow(() -> new BusinessException("Contrat introuvable"));
 
         contrat.setStatut(StatutContrat.ANNULE);
@@ -329,26 +372,29 @@ public class LocationService {
     // =====================================================
     @Transactional
     public Location demarrerLocation(Long id) {
-
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Location introuvable"));
 
-        if (location.getStatut() != StatutLocation.A_VENIR) {
+        LocalDate today = LocalDate.now();
+        StatutLocation currentStatus = calculateStatus(location.getDateDebut(),
+                location.getDateFin(),
+                today);
+
+        if (currentStatus != StatutLocation.A_VENIR) {
             throw new BusinessException("Seules les locations À VENIR peuvent être démarrées");
         }
 
-        LocalDate today = LocalDate.now();
         if (location.getDateDebut().isAfter(today)) {
             throw new BusinessException("La date de début n'est pas encore arrivée");
         }
 
-        // Marquer le véhicule comme indisponible
+        // Marquer le véhicule comme loué
+        location.getVehicule().setStatut("LOUE");
         location.getVehicule().setDisponible(false);
         location.setStatut(StatutLocation.EN_COURS);
 
-        // --- ACTIVER LE CONTRAT ---
-        ContratLocation contrat = contratRepository
-                .findByLocationId(id)
+        // Activer le contrat
+        ContratLocation contrat = contratRepository.findByLocationId(id)
                 .orElseThrow(() -> new BusinessException("Contrat introuvable"));
 
         contrat.setStatut(StatutContrat.ACTIF);
@@ -358,9 +404,9 @@ public class LocationService {
     }
 
     // =====================================================
-    //  MISE À JOUR AUTOMATIQUE DES STATUTS
+    //  MISE À JOUR AUTOMATIQUE DES STATUTS (EXÉCUTÉE TOUTES LES HEURES)
     // =====================================================
-    @Scheduled(cron = "0 0 0 * * ?") // Exécuté tous les jours à minuit
+    @Scheduled(cron = "0 0 * * * ?") // Exécuté toutes les heures à la minute 0
     @Transactional
     public void updateLocationsStatus() {
         List<Location> locations = locationRepository.findAll();
@@ -372,28 +418,13 @@ public class LocationService {
                 continue;
             }
 
-            StatutLocation newStatut = calculateStatus(location, today);
+            StatutLocation newStatut = calculateStatus(location.getDateDebut(),
+                    location.getDateFin(),
+                    today);
 
             // Ne mettre à jour que si le statut a changé
             if (!location.getStatut().equals(newStatut)) {
-
-                // Gérer la disponibilité du véhicule
-                if (location.getVehicule() != null) {
-                    if (newStatut == StatutLocation.EN_COURS &&
-                            location.getStatut() == StatutLocation.A_VENIR) {
-                        // La location passe de À VENIR à EN COURS
-                        location.getVehicule().setDisponible(false);
-                    } else if (newStatut == StatutLocation.TERMINEE) {
-                        // La location se termine
-                        location.getVehicule().setDisponible(true);
-                    }
-                }
-
-                location.setStatut(newStatut);
-                locationRepository.save(location);
-
-                // Mettre à jour le statut du contrat si nécessaire
-                updateContratStatus(location, newStatut);
+                updateLocationAndVehicleStatus(location, newStatut);
             }
         }
     }
@@ -403,12 +434,16 @@ public class LocationService {
     // =====================================================
     @Transactional
     public Location updateLocation(Long id, LocationDTO dto) {
-
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Location introuvable"));
 
-        // Vérifier que la location est À VENIR
-        if (location.getStatut() != StatutLocation.A_VENIR) {
+        // Recalculer le statut actuel
+        LocalDate today = LocalDate.now();
+        StatutLocation currentStatus = calculateStatus(location.getDateDebut(),
+                location.getDateFin(),
+                today);
+
+        if (currentStatus != StatutLocation.A_VENIR) {
             throw new BusinessException("Seules les locations À VENIR peuvent être modifiées");
         }
 
@@ -417,7 +452,6 @@ public class LocationService {
             throw new BusinessException("Dates de location obligatoires");
         }
 
-        // CORRECTION : Comparer dateDebut et dateFin (bug dans votre code)
         if (dto.getDateFin().isBefore(dto.getDateDebut())) {
             throw new BusinessException("Date de fin invalide");
         }
@@ -431,20 +465,22 @@ public class LocationService {
 
         // Mettre à jour le véhicule si fourni
         if (dto.getVehiculeId() != null) {
-            Vehicule vehicule = vehiculeRepository.findById(dto.getVehiculeId())
+            Vehicule nouveauVehicule = vehiculeRepository.findById(dto.getVehiculeId())
                     .orElseThrow(() -> new BusinessException("Véhicule introuvable"));
 
-            // Vérifier si le véhicule est disponible (sauf si c'est le même véhicule)
-            if (!location.getVehicule().getId().equals(vehicule.getId()) && !vehicule.isDisponible()) {
-                throw new BusinessException("Véhicule non disponible");
+            // Vérifier si le véhicule est disponible
+            if (!"DISPONIBLE".equals(nouveauVehicule.getStatut())) {
+                throw new BusinessException("Véhicule non disponible (statut: " + nouveauVehicule.getStatut() + ")");
             }
 
-            // Libérer l'ancien véhicule
-            if (!location.getVehicule().getId().equals(vehicule.getId())) {
+            // Libérer l'ancien véhicule s'il est différent
+            if (!location.getVehicule().getId().equals(nouveauVehicule.getId())) {
+                location.getVehicule().setStatut("DISPONIBLE");
                 location.getVehicule().setDisponible(true);
+                vehiculeRepository.save(location.getVehicule());
             }
 
-            location.setVehicule(vehicule);
+            location.setVehicule(nouveauVehicule);
         }
 
         // Mettre à jour les dates
@@ -452,24 +488,18 @@ public class LocationService {
         location.setDateFin(dto.getDateFin());
 
         // Recalculer le montant
-        long nbJours = ChronoUnit.DAYS.between(
-                dto.getDateDebut(),
-                dto.getDateFin()
-        );
+        long nbJours = ChronoUnit.DAYS.between(dto.getDateDebut(), dto.getDateFin());
         if (nbJours <= 0) nbJours = 1;
 
         double montantTotal = nbJours * location.getVehicule().getPrixParJour();
         location.setMontantTotalLocation(montantTotal);
 
         // Recalculer le statut en fonction des nouvelles dates
-        LocalDate today = LocalDate.now();
-        if (dto.getDateDebut().isAfter(today)) {
-            location.setStatut(StatutLocation.A_VENIR);
-        } else if (dto.getDateFin().isBefore(today)) {
-            location.setStatut(StatutLocation.TERMINEE);
-        } else {
-            location.setStatut(StatutLocation.EN_COURS);
-        }
+        StatutLocation newStatut = calculateStatus(dto.getDateDebut(), dto.getDateFin(), today);
+        location.setStatut(newStatut);
+
+        // Mettre à jour le statut du véhicule
+        updateVehicleStatusBasedOnLocation(location.getVehicule(), newStatut);
 
         return locationRepository.save(location);
     }
@@ -479,22 +509,21 @@ public class LocationService {
     // =====================================================
     @Transactional
     public void deleteLocation(Long id) {
-
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Location introuvable"));
 
-        // Vérifier que la location est À VENIR
-        if (location.getStatut() != StatutLocation.A_VENIR) {
+        // Recalculer le statut actuel
+        LocalDate today = LocalDate.now();
+        StatutLocation currentStatus = calculateStatus(location.getDateDebut(),
+                location.getDateFin(),
+                today);
+
+        if (currentStatus != StatutLocation.A_VENIR) {
             throw new BusinessException("Seules les locations À VENIR peuvent être supprimées");
         }
 
         // Supprimer le contrat associé s'il existe
         contratRepository.findByLocationId(id).ifPresent(contratRepository::delete);
-
-        // Libérer le véhicule si nécessaire
-        if (location.getVehicule() != null && location.getStatut() == StatutLocation.EN_COURS) {
-            location.getVehicule().setDisponible(true);
-        }
 
         // Supprimer la location
         locationRepository.delete(location);
@@ -503,10 +532,10 @@ public class LocationService {
     // =====================================================
     //  CALCULER LE STATUT D'UNE LOCATION
     // =====================================================
-    private StatutLocation calculateStatus(Location location, LocalDate today) {
-        if (location.getDateDebut().isAfter(today)) {
+    private StatutLocation calculateStatus(LocalDate dateDebut, LocalDate dateFin, LocalDate today) {
+        if (dateDebut.isAfter(today)) {
             return StatutLocation.A_VENIR;
-        } else if (location.getDateFin().isBefore(today)) {
+        } else if (dateFin.isBefore(today)) {
             return StatutLocation.TERMINEE;
         } else {
             return StatutLocation.EN_COURS;
@@ -518,8 +547,7 @@ public class LocationService {
     // =====================================================
     private void updateContratStatus(Location location, StatutLocation newLocationStatut) {
         try {
-            ContratLocation contrat = contratRepository
-                    .findByLocationId(location.getId())
+            ContratLocation contrat = contratRepository.findByLocationId(location.getId())
                     .orElse(null);
 
             if (contrat != null) {
@@ -535,17 +563,71 @@ public class LocationService {
                 contratRepository.save(contrat);
             }
         } catch (Exception e) {
-            // Log l'erreur mais ne pas bloquer la mise à jour de la location
             System.err.println("Erreur mise à jour contrat pour location " + location.getId() + ": " + e.getMessage());
         }
     }
 
     // =====================================================
-    //  TROUVER UNE LOCATION PAR ID
+    //  METTRE À JOUR LE STATUT DU VÉHICULE
+    // =====================================================
+    private void updateVehicleStatusBasedOnLocation(Vehicule vehicule, StatutLocation locationStatut) {
+        if (vehicule == null) return;
+
+        if (locationStatut == StatutLocation.EN_COURS) {
+            // La location est en cours
+            vehicule.setStatut("LOUE");
+            vehicule.setDisponible(false);
+        } else if (locationStatut == StatutLocation.TERMINEE ||
+                locationStatut == StatutLocation.ANNULEE) {
+            // La location est terminée ou annulée
+            vehicule.setStatut("DISPONIBLE");
+            vehicule.setDisponible(true);
+        }
+        // Pour A_VENIR, on ne change pas le statut du véhicule (il reste DISPONIBLE)
+    }
+
+    // =====================================================
+//  METTRE À JOUR LOCATION ET VÉHICULE
+// =====================================================
+    private void updateLocationAndVehicleStatus(Location location, StatutLocation newStatut) {
+        if (location == null) return;
+
+        StatutLocation oldStatut = location.getStatut();
+
+        // Mettre à jour le statut de la location
+        location.setStatut(newStatut);
+
+        // Mettre à jour le statut du véhicule seulement s'il a changé
+        if (!oldStatut.equals(newStatut)) {
+            updateVehicleStatusBasedOnLocation(location.getVehicule(), newStatut);
+        }
+
+        // Sauvegarder la location
+        locationRepository.save(location);
+
+        // Mettre à jour le statut du contrat
+        updateContratStatus(location, newStatut);
+    }
+
+    // =====================================================
+    //  TROUVER UNE LOCATION PAR ID (AVEC RECALCUL DU STATUT)
     // =====================================================
     public Location findById(Long id) {
-        return locationRepository.findById(id)
+        Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Location introuvable"));
+
+        // Recalculer le statut si nécessaire
+        if (location.getStatut() != StatutLocation.ANNULEE) {
+            LocalDate today = LocalDate.now();
+            StatutLocation newStatut = calculateStatus(location.getDateDebut(),
+                    location.getDateFin(),
+                    today);
+            if (!location.getStatut().equals(newStatut)) {
+                updateLocationAndVehicleStatus(location, newStatut);
+            }
+        }
+
+        return location;
     }
 
     // =====================================================
@@ -559,16 +641,15 @@ public class LocationService {
                     location.getStatut() != StatutLocation.ANNULEE &&
                     location.getStatut() != StatutLocation.TERMINEE) {
 
-                // Vérifier si les dates se chevauchent
                 boolean chevauchement =
                         (dateDebut.isBefore(location.getDateFin()) || dateDebut.isEqual(location.getDateFin())) &&
                                 (dateFin.isAfter(location.getDateDebut()) || dateFin.isEqual(location.getDateDebut()));
 
                 if (chevauchement) {
-                    return true; // Conflit trouvé
+                    return true;
                 }
             }
         }
-        return false; // Pas de conflit
+        return false;
     }
 }

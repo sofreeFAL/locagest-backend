@@ -27,14 +27,20 @@ public class Vehicule {
     @Column(name = "prix_par_jour", nullable = false)
     private Double prixParJour;
 
-    @Column(nullable = false)
-    private boolean disponible = true;
-
-    // AJOUTER CE CHAMP POUR LE STATUT
+    // CHAMP UNIQUE POUR LE STATUT
     @Column(nullable = false, length = 20)
     private String statut = "DISPONIBLE"; // Valeurs: DISPONIBLE, LOUE, EN_MAINTENANCE
 
+    // CHAMP DÉRIVÉ (calculé automatiquement)
+    @Transient // Ce champ n'est pas persisté en base, il est calculé
+    public boolean isDisponible() {
+        return "DISPONIBLE".equals(statut);
+    }
 
+    // Méthode pour définir le statut et synchroniser la disponibilité
+    public void setStatut(String statut) {
+        this.statut = statut != null ? statut.toUpperCase() : "DISPONIBLE";
+    }
 
     // ===== GETTERS & SETTERS =====
 
@@ -78,20 +84,21 @@ public class Vehicule {
         this.prixParJour = prixParJour;
     }
 
-    public boolean isDisponible() {
-        return disponible;
-    }
-
-    public void setDisponible(boolean disponible) {
-        this.disponible = disponible;
-    }
-
-    // AJOUTER CES GETTERS/SETTERS
     public String getStatut() {
         return statut;
     }
 
-    public void setStatut(String statut) {
-        this.statut = statut;
+    // Méthode dépréciée - à utiliser uniquement pour la compatibilité
+    @Deprecated
+    public void setDisponible(boolean disponible) {
+        // Cette méthode ne fait rien car la disponibilité est dérivée du statut
+        // Elle est gardée pour la compatibilité avec le code existant
+        if (disponible) {
+            this.statut = "DISPONIBLE";
+        } else if ("EN_MAINTENANCE".equals(this.statut)) {
+            // Si le véhicule est en maintenance, on garde ce statut
+            // Sinon on met "LOUE"
+            this.statut = "LOUE";
+        }
     }
 }

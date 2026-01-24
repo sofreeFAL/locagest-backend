@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LocalGest - Gestion des locations</title>
+    <title>LocaGest - Gestion des locations</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -24,7 +24,7 @@
                     <circle cx="28" cy="30" r="2" fill="#FF8C00"/>
                 </svg>
             </div>
-            <h1 class="app-title">LocalGest</h1>
+            <h1 class="app-title">LocaGest</h1>
         </div>
 
         <nav class="horizontal-menu">
@@ -253,13 +253,13 @@
                     <div class="form-group">
                         <label>Client *</label>
                         <select id="editClient" required>
-                            <option value="">Sélectionner un client</option>
+                            <option value="">Chargement des clients...</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Véhicule *</label>
                         <select id="editVehicle" required>
-                            <option value="">Sélectionner un véhicule</option>
+                            <option value="">Chargement des véhicules...</option>
                         </select>
                     </div>
                 </div>
@@ -275,9 +275,20 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Montant total (€) *</label>
-                    <input type="number" id="editTotalAmount" min="0" step="0.01" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Montant total (FCFA) *</label>
+                        <input type="number" id="editTotalAmount" min="0" step="1000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Statut *</label>
+                        <select id="editLocationStatus" required>
+                            <option value="A_VENIR">À venir</option>
+                            <option value="EN_COURS">En cours</option>
+                            <option value="TERMINEE">Terminée</option>
+                            <option value="ANNULEE">Annulée</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group">

@@ -6,10 +6,28 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     loadContracts();
-    loadLocationsForContract();
+    setupEventListeners();
 });
 
 let currentEditContractId = null;
+
+function setupEventListeners() {
+    // Pré-remplir la date d'aujourd'hui dans le formulaire
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('contractCreationDate');
+    if (dateInput) {
+        dateInput.value = today;
+    }
+
+    // Masquer le champ numéro de contrat (auto-généré)
+    const contractNumberInput = document.getElementById('contractNumber');
+    if (contractNumberInput) {
+        contractNumberInput.value = "Auto-généré à la création";
+        contractNumberInput.readOnly = true;
+        contractNumberInput.style.backgroundColor = '#f5f5f5';
+        contractNumberInput.style.color = '#666';
+    }
+}
 
 async function loadContracts() {
     try {
@@ -64,12 +82,6 @@ function displayContracts(contracts) {
         const client = location.client || {};
         const vehicle = location.vehicule || {};
 
-        // DEBUG: Afficher la structure de l'objet
-        console.log('Contract object:', contract);
-        console.log('Location object:', location);
-        console.log('Location montantTotalLocation:', location.montantTotalLocation);
-        console.log('Location montantTotal:', location.montantTotal);
-
         // Format des dates
         const formatDate = (dateString) => {
             if (!dateString) return 'N/A';
@@ -89,50 +101,51 @@ function displayContracts(contracts) {
             duration = `${diffDays} jours`;
         }
 
-        // Récupérer le montant - essayer différentes propriétés
+        // Récupérer le montant
         if (location.montantTotalLocation !== undefined && location.montantTotalLocation !== null) {
-            montant = `${location.montantTotalLocation} FCFA`;
-        } else if (location.montantTotal !== undefined && location.montantTotal !== null) {
-            montant = `${location.montantTotal} FCFA`;
-        } else if (location.montant !== undefined && location.montant !== null) {
-            montant = `${location.montant} FCFA`;
-        } else if (contract.montantTotal !== undefined && contract.montantTotal !== null) {
-            montant = `${contract.montantTotal} FCFA`;
+            montant = `${new Intl.NumberFormat('fr-FR').format(location.montantTotalLocation)} FCFA`;
         }
 
-        // Badge de statut avec le même style que l'historique
+        // Badge de statut
         let statusBadge = '';
         if (contract.statut === 'ACTIF') {
             statusBadge = `
-        <span class="history-badge" style="background-color: rgba(255, 140, 0, 0.2); color: #ff8c00;">
-            <i class="fas fa-clock" style="margin-right: 5px;"></i>
-            En cours
-        </span>
-    `;
+                <span class="history-badge" style="background-color: rgba(255, 140, 0, 0.2); color: #ff8c00;">
+                    <i class="fas fa-clock" style="margin-right: 5px;"></i>
+                    Actif
+                </span>
+            `;
         } else if (contract.statut === 'TERMINE') {
             statusBadge = `
-        <span class="history-badge" style="background-color: rgba(52, 152, 219, 0.2); color: #3498DB;">
-            <i class="fas fa-check-circle" style="margin-right: 5px;"></i>
-            Terminé
-        </span>
-    `;
+                <span class="history-badge" style="background-color: rgba(52, 152, 219, 0.2); color: #3498DB;">
+                    <i class="fas fa-check-circle" style="margin-right: 5px;"></i>
+                    Terminé
+                </span>
+            `;
+        } else if (contract.statut === 'EN_ATTENTE') {
+            statusBadge = `
+                <span class="history-badge" style="background-color: rgba(155, 89, 182, 0.2); color: #9b59b6;">
+                    <i class="fas fa-hourglass-half" style="margin-right: 5px;"></i>
+                    En attente
+                </span>
+            `;
         } else {
             statusBadge = `
-        <span class="history-badge" style="background-color: rgba(108, 117, 125, 0.2); color: #6c757d;">
-            <i class="fas fa-question-circle" style="margin-right: 5px;"></i>
-            ${contract.statut}
-        </span>
-    `;
+                <span class="history-badge" style="background-color: rgba(108, 117, 125, 0.2); color: #6c757d;">
+                    <i class="fas fa-question-circle" style="margin-right: 5px;"></i>
+                    ${contract.statut}
+                </span>
+            `;
         }
 
         // Actions selon le statut
         let actions = '';
         if (contract.statut === 'ACTIF') {
             actions = `
-                <button onclick="editContract(${contract.id})" class="btn-icon" title="Modifier">
-                    <i class="fas fa-edit" style="color: #FF8C00;"></i>
+                <button onclick="viewContract(${contract.id})" class="btn-action btn-blue" title="Voir">
+                    <i class="fas fa-eye"></i> Voir
                 </button>
-                <button onclick="closeContract(${contract.id})" class="btn-action btn-blue" title="Clôturer">
+                <button onclick="closeContract(${contract.id})" class="btn-action btn-orange" title="Clôturer">
                     Clôturer
                 </button>
             `;
@@ -169,41 +182,10 @@ function displayContracts(contracts) {
     }).join('');
 }
 
-async function loadLocationsForContract() {
-    try {
-        const token = localStorage.getItem('locagest_token');
-        const response = await fetch('http://localhost:8080/locations', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (response.ok) {
-            const locations = await response.json();
-            const select = document.getElementById('contractLocation');
-            select.innerHTML = '<option value="">Sélectionner une location</option>';
-            locations.forEach(location => {
-                const client = location.client || {};
-                const vehicle = location.vehicule || {};
-                const option = document.createElement('option');
-                option.value = location.id;
-                option.textContent = `${client.prenom || ''} ${client.nom || ''} - ${vehicle.marque || ''} ${vehicle.modele || ''}`;
-                option.setAttribute('data-datedebut', location.dateDebut || '');
-                option.setAttribute('data-datefin', location.dateFin || '');
-                option.setAttribute('data-montant', location.montantTotal || 0);
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Erreur chargement locations:', error);
-    }
-}
-
 async function loadAvailableLocations() {
     try {
         const token = localStorage.getItem('locagest_token');
-        const response = await fetch('http://localhost:8080/locations/sans-contrat', {
+        const response = await fetch('http://localhost:8080/contrats/locations/sans-contrat', {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -222,49 +204,18 @@ async function loadAvailableLocations() {
                 option.disabled = true;
                 select.appendChild(option);
             } else {
-                // Pour chaque location, récupérer les détails du client et du véhicule
-                for (const location of locations) {
-                    // Récupérer les détails du client
-                    const clientResponse = await fetch(`http://localhost:8080/clients/${location.clientId}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    // Récupérer les détails du véhicule
-                    const vehicleResponse = await fetch(`http://localhost:8080/vehicles/${location.vehiculeId}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    let clientName = 'Client inconnu';
-                    let vehicleInfo = 'Véhicule inconnu';
-
-                    if (clientResponse.ok) {
-                        const client = await clientResponse.json();
-                        clientName = `${client.prenom} ${client.nom}`;
-                    }
-
-                    if (vehicleResponse.ok) {
-                        const vehicle = await vehicleResponse.json();
-                        vehicleInfo = `${vehicle.marque} ${vehicle.modele}`;
-                    }
-
-                    // Formater la date
-                    const formatDate = (dateString) => {
-                        const date = new Date(dateString);
-                        return date.toLocaleDateString('fr-FR');
-                    };
-
+                locations.forEach(location => {
                     const option = document.createElement('option');
                     option.value = location.id;
-                    option.textContent = `Loc#${location.id}: ${clientName} - ${vehicleInfo} (${formatDate(location.dateDebut)} au ${formatDate(location.dateFin)}) - ${location.montantTotalLocation} €`;
+                    option.textContent = location.displayLabel || `Location #${location.id}`;
+                    option.setAttribute('data-details', JSON.stringify(location));
                     select.appendChild(option);
-                }
+                });
             }
+        } else {
+            console.error('Erreur API:', response.status);
+            const select = document.getElementById('contractLocation');
+            select.innerHTML = '<option value="">Erreur de chargement des locations</option>';
         }
     } catch (error) {
         console.error('Erreur chargement locations disponibles:', error);
@@ -276,29 +227,83 @@ async function loadAvailableLocations() {
 function openAddContractModal() {
     document.getElementById('addContractModal').style.display = 'flex';
     loadAvailableLocations();
+    // Réinitialiser les détails
+    document.getElementById('locationDetails').style.display = 'none';
 }
 
 function closeAddContractModal() {
     document.getElementById('addContractModal').style.display = 'none';
     document.getElementById('addContractForm').reset();
+    document.getElementById('locationDetails').style.display = 'none';
+    const dateInput = document.getElementById('contractCreationDate');
+    if (dateInput) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
+}
+
+function updateLocationDetails() {
+    const locationId = document.getElementById('contractLocation').value;
+    const detailsDiv = document.getElementById('locationDetails');
+
+    if (!locationId) {
+        detailsDiv.style.display = 'none';
+        return;
+    }
+
+    try {
+        const select = document.getElementById('contractLocation');
+        const selectedOption = select.options[select.selectedIndex];
+        const details = JSON.parse(selectedOption.getAttribute('data-details') || '{}');
+
+        document.getElementById('detailClient').textContent =
+            `${details.clientPrenom || ''} ${details.clientNom || ''}`;
+        document.getElementById('detailVehicle').textContent =
+            `${details.vehiculeMarque || ''} ${details.vehiculeModele || ''}`;
+        document.getElementById('detailDateDebut').textContent = details.dateDebut || '-';
+        document.getElementById('detailDateFin').textContent = details.dateFin || '-';
+        document.getElementById('detailDuree').textContent =
+            details.dateDebut && details.dateFin ?
+                calculateDaysBetween(details.dateDebut, details.dateFin) + ' jours' : '-';
+        document.getElementById('detailMontant').textContent =
+            details.montantTotal ? new Intl.NumberFormat('fr-FR').format(details.montantTotal) + ' FCFA' : '-';
+
+        detailsDiv.style.display = 'block';
+    } catch (error) {
+        console.error('Erreur affichage détails:', error);
+        detailsDiv.style.display = 'none';
+    }
+}
+
+function calculateDaysBetween(dateDebut, dateFin) {
+    try {
+        const [day1, month1, year1] = dateDebut.split('/');
+        const [day2, month2, year2] = dateFin.split('/');
+
+        const start = new Date(year1, month1 - 1, day1);
+        const end = new Date(year2, month2 - 1, day2);
+
+        const diffTime = Math.abs(end - start);
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    } catch (e) {
+        return 'N/A';
+    }
 }
 
 async function saveContract() {
     const locationId = document.getElementById('contractLocation').value;
+    const status = document.getElementById('contractStatus').value;
+    const creationDate = document.getElementById('contractCreationDate').value;
 
     if (!locationId) {
         showNotification('Veuillez sélectionner une location', 'error');
         return;
     }
 
-    // Générer un numéro de contrat
-    const contractNumber = 'CTR-' + new Date().getTime() + '-' + Math.floor(Math.random() * 1000);
-
+    // Le numéro de contrat sera généré automatiquement côté serveur
     const contractData = {
-        numeroContrat: contractNumber,
         locationId: parseInt(locationId),
-        dateCreation: new Date().toISOString().split('T')[0],
-        statut: 'ACTIF'
+        dateCreation: creationDate,
+        statut: status
     };
 
     console.log('Création contrat:', contractData);
@@ -351,14 +356,10 @@ async function viewContract(contractId) {
             duration = `${diffDays} jours`;
         }
 
-        // Récupérer le montant - essayer différentes propriétés
+        // Récupérer le montant
         let montant = '0 FCFA';
         if (location.montantTotalLocation !== undefined && location.montantTotalLocation !== null) {
-            montant = `${location.montantTotalLocation} FCFA`;
-        } else if (location.montantTotal !== undefined && location.montantTotal !== null) {
-            montant = `${location.montantTotal} FCFA`;
-        } else if (location.montant !== undefined && location.montant !== null) {
-            montant = `${location.montant} FCFA`;
+            montant = `${new Intl.NumberFormat('fr-FR').format(location.montantTotalLocation)} FCFA`;
         }
 
         const details = `
@@ -406,7 +407,7 @@ async function viewContract(contractId) {
                 <div class="detail-row">
                     <span class="detail-label">Statut:</span>
                     <span class="detail-value ${contract.statut === 'ACTIF' ? 'status-en-cours' : 'status-termine'}">
-                        ${contract.statut === 'ACTIF' ? 'En cours' : 'Terminé'}
+                        ${contract.statut === 'ACTIF' ? 'Actif' : contract.statut === 'TERMINE' ? 'Terminé' : contract.statut === 'EN_ATTENTE' ? 'En attente' : contract.statut}
                     </span>
                 </div>
             </div>
@@ -570,87 +571,75 @@ function logout() {
     window.location.href = 'index.html';
 }
 
-async function updateLocationDetails() {
-    const locationId = document.getElementById('contractLocation').value;
-    const detailsDiv = document.getElementById('locationDetails');
+async function editContract(contractId) {
+    try {
+        const contract = await fetchContract(contractId);
+        currentEditContractId = contractId;
 
-    if (!locationId) {
-        detailsDiv.style.display = 'none';
+        document.getElementById('editContractNumber').value = contract.numeroContrat || '';
+        document.getElementById('editContractStatus').value = contract.statut || 'ACTIF';
+
+        // Formater la date pour l'input type="date"
+        if (contract.dateCreation) {
+            const date = new Date(contract.dateCreation);
+            const formattedDate = date.toISOString().split('T')[0];
+            document.getElementById('editContractCreationDate').value = formattedDate;
+        }
+
+        document.getElementById('editContractModal').style.display = 'flex';
+    } catch (error) {
+        console.error('Erreur chargement contrat pour édition:', error);
+        showNotification('Impossible de charger le contrat pour modification', 'error');
+    }
+}
+
+async function updateContract() {
+    const contractId = currentEditContractId;
+    if (!contractId) return;
+
+    const numeroContrat = document.getElementById('editContractNumber').value;
+    const statut = document.getElementById('editContractStatus').value;
+    const dateCreation = document.getElementById('editContractCreationDate').value;
+
+    if (!numeroContrat || !statut || !dateCreation) {
+        showNotification('Veuillez remplir tous les champs obligatoires', 'error');
         return;
     }
 
+    const updateData = {
+        numeroContrat: numeroContrat,
+        statut: statut,
+        dateCreation: dateCreation
+    };
+
     try {
         const token = localStorage.getItem('locagest_token');
-
-        // 1. Récupérer la location
-        const locationResponse = await fetch(`http://localhost:8080/locations/${locationId}`, {
+        const response = await fetch(`http://localhost:8080/contrats/${contractId}`, {
+            method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify(updateData)
         });
 
-        if (!locationResponse.ok) {
-            throw new Error('Erreur chargement location');
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Erreur API ${response.status}: ${errorText}`);
         }
 
-        const location = await locationResponse.json();
-
-        // 2. Récupérer le client
-        const clientResponse = await fetch(`http://localhost:8080/clients/${location.clientId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        // 3. Récupérer le véhicule
-        const vehicleResponse = await fetch(`http://localhost:8080/vehicles/${location.vehiculeId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        let clientName = 'Client inconnu';
-        let vehicleInfo = 'Véhicule inconnu';
-
-        if (clientResponse.ok) {
-            const client = await clientResponse.json();
-            clientName = `${client.prenom} ${client.nom}`;
-        }
-
-        if (vehicleResponse.ok) {
-            const vehicle = await vehicleResponse.json();
-            vehicleInfo = `${vehicle.marque} ${vehicle.modele} (${vehicle.immatriculation})`;
-        }
-
-        // 4. Calculer la durée
-        const startDate = new Date(location.dateDebut);
-        const endDate = new Date(location.dateFin);
-        const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-
-        // 5. Formater les dates
-        const formatDate = (dateString) => {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('fr-FR');
-        };
-
-        // 6. Afficher les détails
-        document.getElementById('detailClient').textContent = clientName;
-        document.getElementById('detailVehicle').textContent = vehicleInfo;
-        document.getElementById('detailDateDebut').textContent = formatDate(location.dateDebut);
-        document.getElementById('detailDateFin').textContent = formatDate(location.dateFin);
-        document.getElementById('detailDuree').textContent = `${duration} jours`;
-        document.getElementById('detailMontant').textContent = `${location.montantTotalLocation || 0} FCFA`;
-
-        // 7. Afficher la section détails
-        detailsDiv.style.display = 'block';
-
+        closeEditContractModal();
+        loadContracts();
+        showNotification('Contrat modifié avec succès', 'success');
     } catch (error) {
-        console.error('Erreur chargement détails location:', error);
-        detailsDiv.style.display = 'none';
+        console.error('Erreur modification contrat:', error);
+        showNotification(error.message || 'Erreur lors de la modification du contrat', 'error');
     }
+}
+
+function closeEditContractModal() {
+    document.getElementById('editContractModal').style.display = 'none';
+    currentEditContractId = null;
 }
 
 async function debugContract(contractId) {

@@ -3,14 +3,22 @@ package sn.uidt.locagest.locagest_backend.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sn.uidt.locagest.locagest_backend.controller.ContratLocationController;
+import sn.uidt.locagest.locagest_backend.dto.LocationDTO;
 import sn.uidt.locagest.locagest_backend.exception.BusinessException;
+import sn.uidt.locagest.locagest_backend.mapper.LocationMapper;
 import sn.uidt.locagest.locagest_backend.model.ContratLocation;
 import sn.uidt.locagest.locagest_backend.model.Location;
 import sn.uidt.locagest.locagest_backend.model.StatutContrat;
 import sn.uidt.locagest.locagest_backend.repository.ContratLocationRepository;
 import sn.uidt.locagest.locagest_backend.repository.LocationRepository;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ContratLocationService {
@@ -66,8 +74,8 @@ public class ContratLocationService {
                         throw new BusinessException("Un contrat avec ce numéro existe déjà");
                     });
         } else {
-            // Générer un numéro de contrat automatique
-            String autoNumero = "CTR-" + System.currentTimeMillis() + "-" + (int)(Math.random() * 1000);
+            // Générer un numéro de contrat automatique avec UUID
+            String autoNumero = "CTR-" + UUID.randomUUID().toString().toUpperCase();
             request.setNumeroContrat(autoNumero);
         }
 
@@ -75,8 +83,22 @@ public class ContratLocationService {
         ContratLocation contrat = new ContratLocation();
         contrat.setNumeroContrat(request.getNumeroContrat());
         contrat.setLocation(location);
-        contrat.setDateCreation(request.getDateCreation() != null ? request.getDateCreation() : java.time.LocalDate.now());
-        contrat.setStatut(request.getStatut() != null ? request.getStatut() : StatutContrat.ACTIF);
+        contrat.setDateCreation(request.getDateCreation() != null ? request.getDateCreation() : LocalDate.now());
+
+        // Déterminer le statut automatiquement en fonction de la location
+        if (request.getStatut() != null) {
+            contrat.setStatut(request.getStatut());
+        } else {
+            // Statut automatique basé sur la date
+            LocalDate today = LocalDate.now();
+            if (location.getDateFin().isBefore(today)) {
+                contrat.setStatut(StatutContrat.TERMINE);
+            } else if (location.getDateDebut().isAfter(today)) {
+                contrat.setStatut(StatutContrat.EN_ATTENTE);
+            } else {
+                contrat.setStatut(StatutContrat.ACTIF);
+            }
+        }
 
         return contratRepository.save(contrat);
     }
@@ -152,9 +174,54 @@ public class ContratLocationService {
     }
 
     // =====================================================
-    //  RECHERCHER LES LOCATIONS SANS CONTRAT
+    //  RECHERCHER LES LOCATIONS SANS CONTRAT (BRUT)
     // =====================================================
     public List<Location> getLocationsSansContrat() {
         return locationRepository.findLocationsSansContrat();
+    }
+
+    // =====================================================
+    //  RECHERCHER LES LOCATIONS SANS CONTRAT (FORMATÉES)
+    // =====================================================
+    public List<Map<String, Object>> getLocationsSansContratFormatted() {
+        List<Location> locations = locationRepository.findLocationsSansContrat();
+
+        return locations.stream().map(location -> {
+            LocationDTO dto = LocationMapper.toDTO(location);
+
+            // Formater la date
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            String dateDebut = location.getDateDebut() != null ?
+                    location.getDateDebut().format(formatter) : "N/A";
+            String dateFin = location.getDateFin() != null ?
+                    location.getDateFin().format(formatter) : "N/A";
+
+            // Créer un label pour l'affichage dans le select
+            String displayLabel = String.format("%s %s - %s %s (%s - %s) - %,.0f FCFA",
+                    dto.getClientPrenom() != null ? dto.getClientPrenom() : "",
+                    dto.getClientNom() != null ? dto.getClientNom() : "",
+                    dto.getVehiculeMarque() != null ? dto.getVehiculeMarque() : "",
+                    dto.getVehiculeModele() != null ? dto.getVehiculeModele() : "",
+                    dateDebut,
+                    dateFin,
+                    dto.getMontantTotalLocation() != null ? dto.getMontantTotalLocation() : 0
+            );
+
+            // Utiliser HashMap au lieu de Map.of() pour supporter les valeurs null
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", location.getId());
+            result.put("displayLabel", displayLabel);
+            result.put("clientPrenom", dto.getClientPrenom() != null ? dto.getClientPrenom() : "");
+            result.put("clientNom", dto.getClientNom() != null ? dto.getClientNom() : "");
+            result.put("vehiculeMarque", dto.getVehiculeMarque() != null ? dto.getVehiculeMarque() : "");
+            result.put("vehiculeModele", dto.getVehiculeModele() != null ? dto.getVehiculeModele() : "");
+            result.put("dateDebut", dateDebut);
+            result.put("dateFin", dateFin);
+            result.put("montantTotal", dto.getMontantTotalLocation() != null ? dto.getMontantTotalLocation() : 0);
+            result.put("vehiculeId", dto.getVehiculeId() != null ? dto.getVehiculeId() : 0);
+            result.put("clientId", dto.getClientId() != null ? dto.getClientId() : 0);
+
+            return result;
+        }).collect(Collectors.toList());
     }
 }
